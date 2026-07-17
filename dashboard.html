@@ -553,13 +553,18 @@
       currentWallet = walletSnap.data();
       document.querySelector(".balance-amount").textContent = naira(currentWallet.balance || 0);
       loadHistory();
+
+      pendingCharge = null;   // only clear on a confirmed success
+      document.getElementById("pinEntryInput").value = "";
     } catch (err) {
       errorEl.textContent = err?.message || "Something went wrong. Please try again.";
       errorEl.classList.add("visible");
+      document.getElementById("pinEntryInput").value = "";
+      document.getElementById("pinEntryInput").focus();
+      // pendingCharge stays intact — same charge, student gets another attempt
     } finally {
       confirmBtn.disabled = false;
       confirmBtn.textContent = "Confirm";
-      pendingCharge = null;
     }
   });
 

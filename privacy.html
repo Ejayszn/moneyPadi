@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F1115" />
+  <title>Privacy Policy | MoneyPadi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink: #0F1115;
+      --ink-soft: #3A3F47;
+      --surface: #F7F5F0;
+      --surface-dim: #EDEAE1;
+      --card: #FFFFFF;
+      --green: #1A7A5E;
+      --green-deep: #12513E;
+      --line: rgba(15,17,21,0.10);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--surface);
+      color: var(--ink);
+      font-family: 'Inter', system-ui, sans-serif;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      padding: 40px 24px;
+    }
+    .legal-wrap { max-width: 720px; margin: 0 auto; }
+    h1, h2, h3 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; margin-bottom: 16px; }
+    h1 { font-size: 36px; letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 8px; }
+    h2 { font-size: 22px; margin-top: 40px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+    p { color: var(--ink-soft); margin-bottom: 18px; font-size: 15px; }
+    ul { list-style: none; margin-bottom: 24px; }
+    li { display: flex; gap: 12px; font-size: 15px; color: var(--ink-soft); margin-bottom: 12px; }
+    strong { color: var(--ink); font-weight: 600; }
+    .meta { font-size: 13.5px; color: var(--green-deep); font-weight: 600; margin-bottom: 32px; }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 14px; font-weight: 600; color: var(--green-deep);
+      text-decoration: none; margin-bottom: 24px;
+    }
+    .partner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+    .partner-card { background: var(--card); border: 1px solid var(--line); padding: 20px; border-radius: 14px; }
+    .partner-card h3 { font-size: 16px; margin-bottom: 6px; }
+    .partner-card p { font-size: 13px; margin-bottom: 0; }
+    @media (max-width: 600px) { .partner-grid { grid-template-columns: 1fr; } }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 64px 0 40px;
+      background: var(--surface); /* Updated to blend with body */
+      margin-top: 64px;
+    }
+    .footer-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.2fr repeat(2, 0.9fr);
+      gap: 48px;
+      margin-bottom: 48px;
+    }
+    .footer-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .footer-slogan {
+      font-size: 14px;
+      color: var(--ink-soft);
+      max-width: 28ch;
+      line-height: 1.4;
+    }
+    .footer-col-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--ink);
+      margin-bottom: 16px;
+    }
+    .footer-col-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .footer-col-links a {
+      font-size: 14px;
+      color: var(--ink-soft);
+      text-decoration: none;
+      transition: color 0.15s ease;
+    }
+    .footer-col-links a:hover {
+      color: var(--green);
+    }
+    .favicon-placeholder {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      background: var(--green);
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    @media (max-width: 760px) {
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 36px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="legal-wrap">
+  <a href="login.html" class="back-btn">&larr; Back to Login</a>
+  <h1>Privacy Policy</h1>
+  <div class="meta">Last Updated: July, 2026</div>
+
+  <p>MoneyPadi is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our web application.</p>
+
+  <h2>1. Information We Collect</h2>
+  <p>To provide our cardless wallet and digital payment ecosystem, we collect the following datasets:</p>
+  <ul>
+    <li><strong>Account Information:</strong> Full name, email address, and authentication status managed securely via Firebase Authentication.</li>
+    <li><strong>Financial & Payout Data:</strong> Bank account numbers, bank codes, and verified account names. We securely save generated Paystack transfer recipient strings inside private database documents to process external payouts.</li>
+    <li><strong>Transaction Ledgers:</strong> Real-time histories of deposits (top-ups), transactions, vendor payments, and withdrawal statuses tracked within our system.</li>
+  </ul>
+
+  <h2>2. How We Use Your Information</h2>
+  <p>Your data is used strictly to power core application features safely:</p>
+  <ul>
+    <li>To instantly adjust and track your digital wallet balance records.</li>
+    <li>To execute backend webhook verifications so operations process even if a browser is closed unexpectedly.</li>
+    <li>To secure transaction paths against double-crediting via severe server-side constraints.</li>
+    <li>To present transparent operational histories natively on your profile dashboard.</li>
+  </ul>
+
+  <h2>3. Data Sharing & Third-Party Processors</h2>
+  <p>We do not sell your personal or financial histories. Data updates flow out only to verified architecture operators:</p>
+  <div class="partner-grid">
+    <div class="partner-card">
+      <h3>Firebase (Google)</h3>
+      <p>Hosts our cloud databases, real-time balance structures, user authentication states, and secure serverless backend logic.</p>
+    </div>
+    <div class="partner-card">
+      <h3>Paystack Payments Ltd</h3>
+      <p>Processes incoming funding checkouts, validates name-lookup queries, and securely delivers external transfer payouts.</p>
+    </div>
+  </div>
+
+  <h2>4. Cryptographic Safety & Idempotency</h2>
+  <p>All system paths utilize strict single-execution (idempotent) database transaction locks tied to unique transaction handles. Any attempt to duplicate system inputs or alter ledger values externally is automatically blocked by backend validation rules.</p>
+</div>
+
+<footer>
+  <div class="footer-wrap">
+    <div class="footer-grid">
+      <!-- Brand & Slogan Column -->
+      <div class="footer-brand">
+        <div class="logo">
+          <!-- Favicon Placeholder Container -->
+          <div class="favicon-placeholder" title="Favicon Placeholder">M</div>
+          MoneyPadi
+        </div>
+        <p class="footer-slogan">The POS terminal in your pocket.</p>
+      </div>
+
+      <!-- Navigation Column 1 -->
+      <div>
+        <div class="footer-col-title">Platform</div>
+        <ul class="footer-col-links">
+          <li><a href="#">Home</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="blog.html">Blog</a></li>
+        </ul>
+      </div>
+
+      <!-- Navigation Column 2 -->
+      <div>
+        <div class="footer-col-title">Support</div>
+        <ul class="footer-col-links">
+          <li><a href="help.html">Help &amp; Support</a></li>
+          <li><a href="#trust">Security Limits</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Fine Print with Legal Links -->
+    <div style="border-top: 1px solid var(--line); padding-top: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;" class="footer-row">
+      <div class="footer-fine" style="font-size: 13.5px; color: var(--ink-soft);">
+        &copy; 2026 MoneyPadi.
+      </div>
+      <div class="footer-legal" style="display: flex; gap: 20px;">
+        <a href="privacy.html" style="font-size: 13.5px; color: var(--ink-soft); transition: color 0.15s ease;" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--ink-soft)'">Privacy Policy</a>
+        <a href="terms.html" style="font-size: 13.5px; color: var(--ink-soft); transition: color 0.15s ease;" onmouseover="this.style.color='var(--green)'" onmouseout="this.style.color='var(--ink-soft)'">Terms of Service</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
