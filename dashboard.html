@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#12513E" />
+<title>Dashboard | MoneyPadi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1115; --ink-soft:#3A3F47;
+    --surface:#F7F5F0; --surface-dim:#EDEAE1; --card:#FFFFFF;
+    --green:#1A7A5E; --green-deep:#12513E; --amber:#E8A33D;
+    --line:rgba(15,17,21,0.10); --red:#B5442E;
+    --radius:18px;
+    --shadow-soft: 0 1px 2px rgba(15,17,21,0.04), 0 8px 24px rgba(15,17,21,0.06);
+    --shadow-pop: 0 4px 10px rgba(15,17,21,0.08), 0 20px 40px rgba(15,17,21,0.10);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ background:var(--surface); color:var(--ink); font-family:'Inter', system-ui, sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3,.display{ font-family:'Space Grotesk', system-ui, sans-serif; letter-spacing:-0.01em; line-height:1.1; }
+  a{color:inherit; text-decoration:none;}
+  button{font-family:inherit;}
+  .wrap{max-width:720px; margin:0 auto; padding:0 20px;}
+  @media (min-width: 900px){ .wrap{max-width:1040px;} }
+
+  header{ position:sticky; top:0; z-index:30; background:rgba(247,245,240,0.86); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); }
+  nav{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px; max-width:720px; margin:0 auto; }
+  @media (min-width: 900px){ nav{max-width:1040px;} }
+  .logo{ display:flex; align-items:center; gap:9px; font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:18px; }
+  .logo-mark{ width:28px; height:28px; border-radius:8px; background:linear-gradient(155deg, var(--green) 0%, var(--green-deep) 100%); display:flex; align-items:center; justify-content:center; color:white; font-size:14px; font-weight:700; flex-shrink:0; }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 18px; border-radius:100px; font-weight:600; font-size:14px; border:1px solid transparent; cursor:pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease; }
+  .btn-primary{ background:var(--ink); color:white; }
+  .btn-primary:hover{ transform:translateY(-1px); box-shadow:var(--shadow-pop); }
+  .btn-primary:disabled{ opacity:0.55; cursor:not-allowed; transform:none; box-shadow:none; }
+  .btn-ghost{ background:transparent; color:var(--ink); border-color:var(--line); }
+  .btn-ghost:hover{ background:var(--surface-dim); }
+  .btn-full{width:100%;}
+
+  .avatar-btn{
+    padding:9px 18px; border-radius:100px; border:1px solid var(--line); cursor:pointer;
+    background:var(--card); color:var(--ink);
+    font-family:'Inter', sans-serif; font-weight:600; font-size:14px;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .avatar-btn:hover{ background:var(--surface-dim); }
+  .avatar-btn .dot{ width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0; }
+
+  .profile-row{ display:flex; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .profile-row:last-of-type{border-bottom:none;}
+  .profile-row .k{color:var(--ink-soft);}
+  .profile-row .v{font-weight:600; text-align:right;}
+
+  main{ padding:32px 0 80px; }
+
+  /* Balance card */
+  .balance-card{
+    background:linear-gradient(155deg, var(--green) 0%, var(--green-deep) 100%);
+    border-radius:22px; padding:28px 26px; color:white; box-shadow:var(--shadow-pop);
+  }
+  .balance-label{ font-size:12.5px; font-weight:600; opacity:0.85; text-transform:uppercase; letter-spacing:0.06em; }
+  .balance-amount{ font-family:'Space Grotesk', sans-serif; font-size:40px; font-weight:700; margin-top:8px; }
+  .balance-code{ margin-top:14px; font-size:13px; opacity:0.85; }
+  .balance-code b{ font-family:'Space Grotesk', sans-serif; letter-spacing:0.04em; }
+  .locked-banner{
+    margin-top:36px; background:rgba(0,0,0,0.18); border-radius:12px; padding:10px 14px; font-size:13px;
+  }
+
+  /* Mode toggle */
+  .mode-toggle{ display:inline-flex; padding:4px; background:var(--surface-dim); border-radius:100px; margin:24px 0 20px; gap:4px; }
+  .mode-btn{ padding:9px 22px; border-radius:100px; font-size:14px; font-weight:600; color:var(--ink-soft); cursor:pointer; border:none; background:transparent; }
+  .mode-btn.active{ background:var(--ink); color:white; }
+  .mode-panel{display:none;}
+  .mode-panel.active{display:block;}
+
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow-soft); }
+  .card + .card{margin-top:16px;}
+  @media (min-width: 900px){
+    .mode-panel.active{ display:grid; grid-template-columns: 1fr 1fr; gap:20px; align-items:start; }
+    .card + .card{margin-top:0;}
+  }
+  .card h3{font-size:15.5px; font-weight:600; margin-bottom:14px;}
+
+  /* Pay panel: QR */
+  .code-display{
+    text-align:center; padding:28px 20px;
+    background:var(--surface-dim); border-radius:16px; border:1px solid var(--line);
+  }
+  .qr-code-text{ font-family:'Space Grotesk', sans-serif; font-size:36px; font-weight:700; letter-spacing:0.08em; }
+  .qr-hint{ text-align:center; font-size:13px; color:var(--ink-soft); margin-top:14px; }
+
+  /* Receive panel: charge form */
+  .field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px;}
+  .field label{font-size:13px; font-weight:600; color:var(--ink-soft);}
+  .field input{ padding:12px 14px; border-radius:11px; border:1px solid var(--line); background:var(--card); font-size:14.5px; font-family:inherit; color:var(--ink); outline-offset:2px; }
+  .field input:focus-visible{ outline:2px solid var(--green); border-color:var(--green); }
+  .amount-prefix{ position:relative; }
+  .amount-prefix span{ position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--ink-soft); font-size:14.5px; }
+  .amount-prefix input{ padding-left:30px; }
+
+  /* Transaction history */
+  .tx-row{ display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .tx-row:last-child{border-bottom:none;}
+  .tx-row .name{font-weight:500;}
+  .tx-row .meta{color:var(--ink-soft); font-size:12.5px; margin-top:2px;}
+  .tx-row .amt.out{color:var(--red); font-weight:600;}
+  .tx-row .amt.in{color:var(--green-deep); font-weight:600;}
+  .empty-state{ text-align:center; padding:20px 0; color:var(--ink-soft); font-size:13.5px; }
+
+  .form-error{ display:none; font-size:13px; color:var(--red); background:rgba(181,68,46,0.08); border:1px solid rgba(181,68,46,0.2); border-radius:10px; padding:10px 13px; margin-bottom:14px; }
+  .form-error.visible{display:block;}
+  .form-success{ display:none; font-size:13px; color:var(--green-deep); background:rgba(26,122,94,0.08); border:1px solid rgba(26,122,94,0.2); border-radius:10px; padding:10px 13px; margin-bottom:14px; }
+  .form-success.visible{display:block;}
+
+  /* Modal (PIN setup + PIN entry) */
+  .modal-backdrop{
+    display:none; position:fixed; inset:0; background:rgba(15,17,21,0.5);
+    align-items:center; justify-content:center; padding:20px; z-index:100;
+  }
+  .modal-backdrop.open{display:flex;}
+  .modal{ background:var(--card); border-radius:20px; padding:28px 24px; width:100%; max-width:380px; box-shadow:var(--shadow-pop); }
+  .modal h2{font-size:20px; font-weight:700;}
+  .modal p.sub{margin-top:6px; font-size:13.5px; color:var(--ink-soft);}
+  .pin-input{
+    width:100%; margin-top:20px; padding:14px; border-radius:12px; border:1px solid var(--line);
+    font-size:22px; text-align:center; letter-spacing:0.4em; font-family:'Space Grotesk', sans-serif;
+  }
+  .pin-input:focus-visible{ outline:2px solid var(--green); border-color:var(--green); }
+  .modal-actions{ display:flex; gap:10px; margin-top:20px; }
+  .modal-actions .btn{flex:1;}
+
+  .loading-row{ text-align:center; padding:40px 0; color:var(--ink-soft); font-size:14px; }
+</style>
+</head>
+<body>
+
+<header>
+  <nav>
+    <div class="logo"><div class="logo-mark">M</div>MoneyPadi</div>
+    <button class="avatar-btn" id="avatarBtn" aria-label="Open profile"><span class="dot"></span>Profile</button>
+  </nav>
+</header>
+
+<main>
+  <div class="wrap" id="dashboardRoot">
+    <div class="loading-row" id="loadingRow">Loading your wallet…</div>
+  </div>
+</main>
+
+<!-- PIN SETUP MODAL (first dashboard visit) -->
+<div class="modal-backdrop" id="pinSetupModal">
+  <div class="modal">
+    <h2>Set your wallet PIN</h2>
+    <p class="sub">You'll enter this PIN on a vendor's device to authorize charges. Choose 4–6 digits — don't use anything obvious like 1234.</p>
+    <div class="form-error" id="pinSetupError"></div>
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" class="pin-input" id="pinSetupInput" placeholder="••••" />
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-full" id="pinSetupSubmit">Set PIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN ENTRY MODAL (student authorizes a charge on vendor's device) -->
+<div class="modal-backdrop" id="pinEntryModal">
+  <div class="modal">
+    <h2>Student: enter your PIN</h2>
+    <p class="sub" id="pinEntrySub">This confirms the charge — not the vendor's PIN.</p>
+    <div class="form-error" id="pinEntryError"></div>
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" class="pin-input" id="pinEntryInput" placeholder="••••" />
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="pinEntryCancel">Cancel</button>
+      <button class="btn btn-primary" id="pinEntryConfirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="modal-backdrop" id="profileModal">
+  <div class="modal">
+    <h2>Your account</h2>
+    <div style="margin-top:16px;">
+      <div class="profile-row"><span class="k">Name</span><span class="v" id="profileName">—</span></div>
+      <div class="profile-row"><span class="k">Email</span><span class="v" id="profileEmail">—</span></div>
+      <div class="profile-row"><span class="k">Wallet code</span><span class="v" id="profileCode">—</span></div>
+      <div class="profile-row"><span class="k">PIN status</span><span class="v" id="profilePinStatus">—</span></div>
+    </div>
+
+    <div id="profilePinChangeSection" style="margin-top:18px;">
+      <div class="form-error" id="profilePinError"></div>
+      <div class="form-success" id="profilePinSuccess"></div>
+      <label for="profilePinInput" style="font-size:13px; font-weight:600; color:var(--ink-soft);" id="profilePinLabel">Set your PIN</label>
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" class="pin-input" id="profilePinInput" placeholder="••••" style="margin-top:8px;" />
+      <button class="btn btn-primary btn-full" id="profilePinSubmit" style="margin-top:12px;">Save PIN</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-full" id="profileCloseBtn">Close</button>
+      <button class="btn btn-ghost btn-full" id="profileLogoutBtn" style="color:var(--red); border-color:rgba(181,68,46,0.25);">Log out</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, updateDoc,
+    collection, query, where, orderBy, limit, getDocs
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+  import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNj6C0cD2AnVjeN6auVeUmK5A9tTcj5nU",
+    authDomain: "moneypadi.firebaseapp.com",
+    projectId: "moneypadi",
+    storageBucket: "moneypadi.firebasestorage.app",
+    messagingSenderId: "709790962707",
+    appId: "1:709790962707:web:0c31584ea0009ad0315be6"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const functions = getFunctions(app);
+
+  const getWalletStatus = httpsCallable(functions, "getWalletStatus");
+  const setPinFn = httpsCallable(functions, "setPin");
+  const chargeWalletFn = httpsCallable(functions, "chargeWallet");
+
+  const naira = (kobo) => `₦${(kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 })}`;
+
+  let currentUser = null;
+  let currentWallet = null;
+  let pendingCharge = null; // { studentCode, amountKobo }
+  let currentPinSet = false; // updated whenever getWalletStatus resolves
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.replace("login.html");
+      return;
+    }
+    currentUser = user;
+    await boot();
+  });
+
+  async function doLogout() {
+    await signOut(auth);
+    window.location.replace("login.html");
+  }
+
+  // ---------- Avatar / profile modal ----------
+  document.getElementById("avatarBtn").addEventListener("click", openProfileModal);
+  document.getElementById("profileCloseBtn").addEventListener("click", () => {
+    document.getElementById("profileModal").classList.remove("open");
+  });
+  document.getElementById("profileLogoutBtn").addEventListener("click", doLogout);
+
+  function openProfileModal() {
+    document.getElementById("profileName").textContent = currentUser.displayName || "—";
+    document.getElementById("profileEmail").textContent = currentUser.email || "—";
+    document.getElementById("profileCode").textContent = currentWallet?.walletCode || "—";
+    document.getElementById("profilePinStatus").textContent = currentPinSet ? "Set" : "Not set";
+    document.getElementById("profilePinLabel").textContent = currentPinSet ? "Change your PIN" : "Set your PIN";
+    document.getElementById("profilePinSubmit").textContent = currentPinSet ? "Update PIN" : "Save PIN";
+    document.getElementById("profilePinInput").value = "";
+    document.getElementById("profilePinError").classList.remove("visible");
+    document.getElementById("profilePinSuccess").classList.remove("visible");
+    document.getElementById("profileModal").classList.add("open");
+  }
+
+  document.getElementById("profilePinSubmit").addEventListener("click", async () => {
+    const pin = document.getElementById("profilePinInput").value.trim();
+    const errorEl = document.getElementById("profilePinError");
+    const successEl = document.getElementById("profilePinSuccess");
+    const submitBtn = document.getElementById("profilePinSubmit");
+    errorEl.classList.remove("visible");
+    successEl.classList.remove("visible");
+
+    if (!/^\d{4,6}$/.test(pin)) {
+      errorEl.textContent = "PIN must be 4-6 digits.";
+      errorEl.classList.add("visible");
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving…";
+    try {
+      await setPinFn({ pin });
+      currentPinSet = true;
+      document.getElementById("profilePinStatus").textContent = "Set";
+      document.getElementById("profilePinLabel").textContent = "Change your PIN";
+      document.getElementById("profilePinInput").value = "";
+      successEl.textContent = "PIN saved.";
+      successEl.classList.add("visible");
+    } catch (err) {
+      errorEl.textContent = err?.message || "Couldn't save your PIN. Try again.";
+      errorEl.classList.add("visible");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = currentPinSet ? "Update PIN" : "Save PIN";
+    }
+  });
+
+  async function boot() {
+    const walletRef = doc(db, "wallets", currentUser.uid);
+    const walletSnap = await getDoc(walletRef);
+
+    if (!walletSnap.exists()) {
+      // Signup just happened — the onUserCreate Cloud Function runs
+      // async and may take a beat to land. Retry briefly before giving up.
+      await new Promise(r => setTimeout(r, 1500));
+      const retrySnap = await getDoc(walletRef);
+      if (!retrySnap.exists()) {
+        document.getElementById("loadingRow").textContent =
+          "Still setting up your wallet — refresh in a few seconds.";
+        return;
+      }
+      currentWallet = retrySnap.data();
+    } else {
+      currentWallet = walletSnap.data();
+    }
+
+    renderDashboard();
+
+    const params = new URLSearchParams(window.location.search);
+    try {
+      const { data: status } = await getWalletStatus();
+      currentPinSet = !!status.pinSet;
+
+      if (status.wasLocked) {
+        showToastBanner("Your wallet was locked from failed PIN attempts — it's unlocked now that you're logged in.");
+      }
+      if (!status.pinSet || params.get("setup") === "pin") {
+        document.getElementById("pinSetupModal").classList.add("open");
+      }
+    } catch (err) {
+      // getWalletStatus can be briefly unreachable right after a fresh
+      // deploy while Cloud Run finishes provisioning — don't let that
+      // block the rest of the dashboard from working.
+      console.error("getWalletStatus failed:", err);
+      if (params.get("setup") === "pin") {
+        document.getElementById("pinSetupModal").classList.add("open");
+      }
+    }
+  }
+
+  function showToastBanner(message) {
+    const el = document.createElement("div");
+    el.className = "locked-banner";
+    el.style.marginTop = "0";
+    el.style.marginBottom = "16px";
+    el.style.background = "rgba(232,163,61,0.15)";
+    el.style.color = "var(--ink)";
+    el.style.border = "1px solid rgba(232,163,61,0.35)";
+    el.style.borderRadius = "12px";
+    el.style.padding = "12px 14px";
+    el.style.fontSize = "13.5px";
+    el.textContent = message;
+    document.getElementById("dashboardRoot").prepend(el);
+  }
+
+  function renderDashboard() {
+    const root = document.getElementById("dashboardRoot");
+    root.innerHTML = `
+      <div class="balance-card">
+        <div class="balance-label">Wallet balance</div>
+        <div class="balance-amount">${naira(currentWallet.balance || 0)}</div>
+        <div class="balance-code">Your code: <b>${currentWallet.walletCode}</b></div>
+      </div>
+
+      <div class="mode-toggle" role="tablist">
+        <button class="mode-btn" data-mode="pay">Pay</button>
+        <button class="mode-btn" data-mode="receive">Receive</button>
+      </div>
+
+      <div class="mode-panel" id="panel-pay">
+        <div class="card">
+          <h3>Show this to pay</h3>
+          <div class="code-display">
+            <div class="qr-code-text">${currentWallet.walletCode}</div>
+          </div>
+          <div class="qr-hint">Works even without your own network — the vendor's connection carries it.</div>
+        </div>
+        <div class="card">
+          <h3>Recent charges</h3>
+          <div id="payHistory"><div class="empty-state">Loading…</div></div>
+        </div>
+      </div>
+
+      <div class="mode-panel" id="panel-receive">
+        <div class="card">
+          <h3>Charge a student</h3>
+          <div class="form-error" id="chargeError"></div>
+          <div class="form-success" id="chargeSuccess"></div>
+          <div class="field">
+            <label for="studentCodeInput">Student code</label>
+            <input type="text" id="studentCodeInput" placeholder="A29-4K7" autocomplete="off" style="text-transform:uppercase;" />
+          </div>
+          <div class="field">
+            <label for="amountInput">Amount</label>
+            <div class="amount-prefix">
+              <span>₦</span>
+              <input type="number" id="amountInput" placeholder="200" min="1" step="1" />
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" id="chargeSubmit">Charge</button>
+        </div>
+        <div class="card">
+          <h3>Today's earnings</h3>
+          <div id="receiveHistory"><div class="empty-state">Loading…</div></div>
+        </div>
+      </div>
+    `;
+
+    // Restore last-used mode (persisted client-side; falls back to Firestore's stored mode)
+    setMode(currentWallet.mode === "receive" ? "receive" : "pay");
+
+    root.querySelectorAll(".mode-btn").forEach(btn => {
+      btn.addEventListener("click", () => setMode(btn.dataset.mode));
+    });
+
+    document.getElementById("chargeSubmit").addEventListener("click", startCharge);
+
+    loadHistory();
+  }
+
+  function setMode(mode) {
+    document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+    document.getElementById("panel-pay").classList.toggle("active", mode === "pay");
+    document.getElementById("panel-receive").classList.toggle("active", mode === "receive");
+
+    if (mode !== currentWallet.mode) {
+      currentWallet.mode = mode;
+      // Fire-and-forget — this is the one field the rules allow the client to write
+      updateDoc(doc(db, "wallets", currentUser.uid), { mode }).catch(() => {});
+    }
+  }
+
+  async function loadHistory() {
+    const txCol = collection(db, "transactions");
+
+    const payerQuery = query(txCol, where("payerUid", "==", currentUser.uid), orderBy("createdAt", "desc"), limit(10));
+    const vendorQuery = query(txCol, where("vendorUid", "==", currentUser.uid), orderBy("createdAt", "desc"), limit(10));
+
+    try {
+      const [payerSnap, vendorSnap] = await Promise.all([getDocs(payerQuery), getDocs(vendorQuery)]);
+      renderHistory("payHistory", payerSnap.docs, "out", d => d.vendorName || "Vendor");
+      renderHistory("receiveHistory", vendorSnap.docs, "in", d => d.payerName || "Student");
+    } catch (err) {
+      // Composite index not yet created in Firestore — first run will
+      // throw with a console link to auto-create it.
+      console.error("History query failed — you likely need to create a Firestore index:", err);
+      document.getElementById("payHistory").innerHTML = '<div class="empty-state">Couldn\'t load history yet.</div>';
+      document.getElementById("receiveHistory").innerHTML = '<div class="empty-state">Couldn\'t load history yet.</div>';
+    }
+  }
+
+  function renderHistory(elId, docs, direction, nameFn) {
+    const el = document.getElementById(elId);
+    if (!docs.length) {
+      el.innerHTML = '<div class="empty-state">Nothing here yet.</div>';
+      return;
+    }
+    el.innerHTML = docs.map(d => {
+      const tx = d.data();
+      const when = tx.createdAt?.toDate ? tx.createdAt.toDate().toLocaleString("en-NG", { hour: "numeric", minute: "2-digit", day: "numeric", month: "short" }) : "";
+      const sign = direction === "out" ? "−" : "+";
+      return `
+        <div class="tx-row">
+          <div>
+            <div class="name">${nameFn(tx)}</div>
+            <div class="meta">${when}</div>
+          </div>
+          <div class="amt ${direction}">${sign}${naira(tx.amount)}</div>
+        </div>`;
+    }).join("");
+  }
+
+  // ---------- Charge flow: vendor enters code+amount, then hands
+  // device to the student to type their PIN ----------
+  function startCharge() {
+    const errorEl = document.getElementById("chargeError");
+    const successEl = document.getElementById("chargeSuccess");
+    errorEl.classList.remove("visible");
+    successEl.classList.remove("visible");
+
+    const studentCode = document.getElementById("studentCodeInput").value.trim().toUpperCase();
+    const amountNaira = Number(document.getElementById("amountInput").value);
+
+    if (!studentCode) {
+      errorEl.textContent = "Enter the student's code.";
+      errorEl.classList.add("visible");
+      return;
+    }
+    if (!Number.isFinite(amountNaira) || amountNaira <= 0) {
+      errorEl.textContent = "Enter a valid amount.";
+      errorEl.classList.add("visible");
+      return;
+    }
+    if (amountNaira > 5000) {
+      errorEl.textContent = "Charges are capped at ₦5,000 per transaction.";
+      errorEl.classList.add("visible");
+      return;
+    }
+
+    pendingCharge = { studentCode, amountKobo: Math.round(amountNaira * 100) };
+    document.getElementById("pinEntrySub").textContent =
+      `Hand the device to the student to confirm ₦${amountNaira.toLocaleString("en-NG")} to your wallet.`;
+    document.getElementById("pinEntryInput").value = "";
+    document.getElementById("pinEntryError").classList.remove("visible");
+    document.getElementById("pinEntryModal").classList.add("open");
+    document.getElementById("pinEntryInput").focus();
+  }
+
+  document.getElementById("pinEntryCancel").addEventListener("click", () => {
+    document.getElementById("pinEntryModal").classList.remove("open");
+    pendingCharge = null;
+  });
+
+  document.getElementById("pinEntryConfirm").addEventListener("click", async () => {
+    const pin = document.getElementById("pinEntryInput").value.trim();
+    const errorEl = document.getElementById("pinEntryError");
+    const confirmBtn = document.getElementById("pinEntryConfirm");
+    errorEl.classList.remove("visible");
+
+    if (!/^\d{4,6}$/.test(pin)) {
+      errorEl.textContent = "Enter a valid PIN.";
+      errorEl.classList.add("visible");
+      return;
+    }
+    if (!pendingCharge) return;
+
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = "Confirming…";
+    try {
+      await chargeWalletFn({
+        studentCode: pendingCharge.studentCode,
+        amount: pendingCharge.amountKobo,
+        pin
+      });
+
+      document.getElementById("pinEntryModal").classList.remove("open");
+      document.getElementById("chargeSuccess").textContent = "Charge confirmed.";
+      document.getElementById("chargeSuccess").classList.add("visible");
+      document.getElementById("studentCodeInput").value = "";
+      document.getElementById("amountInput").value = "";
+
+      // Refresh wallet balance + history
+      const walletSnap = await getDoc(doc(db, "wallets", currentUser.uid));
+      currentWallet = walletSnap.data();
+      document.querySelector(".balance-amount").textContent = naira(currentWallet.balance || 0);
+      loadHistory();
+    } catch (err) {
+      errorEl.textContent = err?.message || "Something went wrong. Please try again.";
+      errorEl.classList.add("visible");
+    } finally {
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = "Confirm";
+      pendingCharge = null;
+    }
+  });
+
+  // ---------- First-time PIN setup ----------
+  document.getElementById("pinSetupSubmit").addEventListener("click", async () => {
+    const pin = document.getElementById("pinSetupInput").value.trim();
+    const errorEl = document.getElementById("pinSetupError");
+    const submitBtn = document.getElementById("pinSetupSubmit");
+    errorEl.classList.remove("visible");
+
+    if (!/^\d{4,6}$/.test(pin)) {
+      errorEl.textContent = "PIN must be 4-6 digits.";
+      errorEl.classList.add("visible");
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving…";
+    try {
+      await setPinFn({ pin });
+      currentPinSet = true;
+      document.getElementById("pinSetupModal").classList.remove("open");
+      // Clean the ?setup=pin param out of the URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete("setup");
+      window.history.replaceState({}, "", url);
+    } catch (err) {
+      errorEl.textContent = err?.message || "Couldn't save your PIN. Try again.";
+      errorEl.classList.add("visible");
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Set PIN";
+    }
+  });
+</script>
+
+</body>
+</html>

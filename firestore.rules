@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Consent (immutable record of ToS/Privacy agreement) ----------
+    match /consent/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.agreedToTerms == true
+                    && request.resource.data.uid == uid;
+      allow update, delete: if false; // permanent — never overwritten
+    }
+
+    // ---------- Wallets ----------
+    match /wallets/{uid} {
+      // Owner can read their own wallet (balance, walletCode, mode)
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      // Owner can ONLY change their "mode" (Pay/Receive tab preference).
+      // balance, walletCode, displayName etc. are Cloud-Function-only.
+      allow update: if request.auth != null && request.auth.uid == uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mode']);
+
+      // Wallet docs are created by the onUserCreate Cloud Function only
+      allow create, delete: if false;
+
+      // PIN hash, failed attempts, lock status, daily spend — never
+      // exposed to ANY client, read or write. Admin SDK (Cloud
+      // Functions) only.
+      match /private/{doc} {
+        allow read, write: if false;
+      }
+    }
+
+    // ---------- Transactions ----------
+    match /transactions/{txId} {
+      // Either party to the transaction can read it, once it exists.
+      allow read: if request.auth != null &&
+                  (request.auth.uid == resource.data.payerUid ||
+                   request.auth.uid == resource.data.vendorUid);
+      // Only the chargeWallet Cloud Function writes transactions —
+      // this is where fund movement + limit enforcement happens, and
+      // it must never be a client-writable path.
+      allow write: if false;
+    }
+
+    // ---------- Everything else stays locked down ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

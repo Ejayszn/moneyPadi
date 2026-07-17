@@ -1,0 +1,932 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0F1115" />
+<meta name="description" content="MoneyPadi. Pay campus vendors instantly. No card, no data wahala." />
+<title>MoneyPadi | No card, no data wahala</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1115;
+    --ink-soft:#3A3F47;
+    --surface:#F7F5F0;
+    --surface-dim:#EDEAE1;
+    --card:#FFFFFF;
+    --green:#1A7A5E;
+    --green-deep:#12513E;
+    --amber:#E8A33D;
+    --line:rgba(15,17,21,0.10);
+    --radius:18px;
+    --shadow-soft: 0 1px 2px rgba(15,17,21,0.04), 0 8px 24px rgba(15,17,21,0.06);
+    --shadow-pop: 0 4px 10px rgba(15,17,21,0.08), 0 20px 40px rgba(15,17,21,0.10);
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--surface);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3, .display{
+    font-family:'Space Grotesk', system-ui, sans-serif;
+    letter-spacing:-0.01em;
+    line-height:1.08;
+  }
+  a{color:inherit; text-decoration:none;}
+  img{max-width:100%; display:block;}
+  .wrap{max-width:1120px; margin:0 auto; padding:0 24px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ---------- NAV ---------- */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:rgba(247,245,240,0.82);
+    backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  nav{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 24px;
+  }
+  .logo{
+    display:flex; align-items:center; gap:9px;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700; font-size:19px;
+  }
+  .logo-mark{
+    width:30px; height:30px; border-radius:9px;
+    background:linear-gradient(155deg, var(--green) 0%, var(--green-deep) 100%);
+    display:flex; align-items:center; justify-content:center;
+    color:white; font-size:15px; font-weight:700;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+    flex-shrink:0;
+  }
+  .nav-links{
+    display:flex; align-items:center; gap:32px;
+    font-size:14.5px; font-weight:500; color:var(--ink-soft);
+  }
+  .nav-links a:hover{color:var(--ink);}
+  .nav-cta{
+    display:flex; gap:10px; align-items:center;
+  }
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:11px 20px;
+    border-radius:100px;
+    font-weight:600; font-size:14.5px;
+    border:1px solid transparent;
+    cursor:pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    white-space:nowrap;
+  }
+  .btn-primary{
+    background:var(--ink); color:white;
+  }
+  .btn-primary:hover{ transform:translateY(-1px); box-shadow:var(--shadow-pop); }
+  .btn-ghost{
+    background:transparent; color:var(--ink); border-color:var(--line);
+  }
+  .btn-ghost:hover{ background:var(--surface-dim); }
+  .btn-sm{ padding:8px 16px; font-size:13.5px; }
+
+  .only-desktop{display:flex;}
+
+  .hamburger{
+    display:none;
+    width:38px; height:38px;
+    border-radius:10px;
+    border:1px solid var(--line);
+    background:transparent;
+    align-items:center; justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .hamburger span{
+    display:block; width:18px; height:2px; background:var(--ink);
+    position:relative;
+    transition:background 0.15s ease;
+  }
+  .hamburger span::before, .hamburger span::after{
+    content:''; position:absolute; left:0; width:18px; height:2px; background:var(--ink);
+    transition:transform 0.2s ease, top 0.2s ease;
+  }
+  .hamburger span::before{ top:-6px; }
+  .hamburger span::after{ top:6px; }
+  .hamburger.open span{ background:transparent; }
+  .hamburger.open span::before{ top:0; transform:rotate(45deg); }
+  .hamburger.open span::after{ top:0; transform:rotate(-45deg); }
+
+  .mobile-menu{
+    display:none;
+    flex-direction:column;
+    gap:4px;
+    padding:8px 24px 20px;
+    border-top:1px solid var(--line);
+  }
+  .mobile-menu.open{ display:flex; }
+  .mobile-menu a{
+    padding:12px 4px;
+    font-size:15px; font-weight:500; color:var(--ink-soft);
+    border-bottom:1px solid var(--line);
+  }
+  .mobile-menu .mobile-cta{
+    display:flex; gap:10px; margin-top:14px;
+  }
+  .mobile-menu .btn{ flex:1; }
+
+  @media (max-width: 900px){
+    .nav-links{display:none;}
+    .only-desktop{display:none;}
+    .hamburger{display:flex;}
+  }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    padding:76px 0 40px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero-grid{
+    display:grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap:56px;
+    align-items:center;
+  }
+  @media (max-width: 900px){
+    .hero-grid{grid-template-columns:1fr; gap:44px;}
+    .hero{padding:44px 0 32px;}
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:13px; font-weight:600; color:var(--green-deep);
+    background:rgba(26,122,94,0.09);
+    border:1px solid rgba(26,122,94,0.18);
+    padding:6px 13px; border-radius:100px;
+    margin-bottom:22px;
+  }
+  .eyebrow-dot{width:6px; height:6px; border-radius:50%; background:var(--green);}
+  .hero h1{
+    font-size:clamp(34px, 5vw, 54px);
+    font-weight:700;
+    max-width:15ch;
+  }
+  .hero h1 em{
+    font-style:normal;
+    background:linear-gradient(180deg, transparent 62%, rgba(232,163,61,0.55) 62%);
+  }
+  .hero p.lead{
+    margin-top:20px;
+    font-size:17.5px;
+    color:var(--ink-soft);
+    max-width:46ch;
+  }
+  .hero-actions{
+    display:flex; gap:12px; margin-top:32px; flex-wrap:wrap;
+  }
+  .hero-note{
+    margin-top:18px; font-size:13.5px; color:var(--ink-soft);
+    display:flex; align-items:center; gap:8px;
+  }
+
+  /* ---------- HERO VISUAL: the tap-to-pay moment ---------- */
+  .scene{
+    position:relative;
+    /* Clean ash-white background for the entire container */
+    background: #F4F5F6; 
+    border: 1px solid rgba(15, 17, 21, 0.18);
+    border-radius:26px;
+    padding:30px;
+    box-shadow:var(--shadow-soft);
+    min-height:420px;
+    display:flex; flex-direction:column; justify-content:space-between;
+    overflow:hidden;
+  }
+  .scene::before{
+    content:'';
+    position:absolute; top:-60px; right:-60px;
+    width:220px; height:220px; border-radius:50%;
+    /* Soft gradient overlay instead of a dark one */
+    background: radial-gradient(circle, rgba(15,17,21,0.03), transparent 70%);
+  }
+  .scene-label{
+    /* Darkened text so it is readable on the ash background */
+    color: var(--ink-soft); 
+    font-size:12.5px; font-weight:600;
+    text-transform:uppercase; letter-spacing:0.06em;
+    display:flex; justify-content:space-between; position:relative; z-index:1;
+  }
+  .scene-card{
+    position:relative; z-index:1;
+    /* Clean crisp white for the inner card to pop against the ash background */
+    background: #FFFFFF; 
+    border:1px solid rgba(15,17,21,0.06);
+    border-radius:18px;
+    padding:22px;
+    margin-top:16px;
+    box-shadow: 0 4px 12px rgba(15,17,21,0.03);
+  }
+  .scene-row{display:flex; justify-content:space-between; align-items:center;}
+  .scene-code{
+    font-family:'Space Grotesk', monospace;
+    font-size:30px; font-weight:700; 
+    color: var(--ink); /* Changed to dark ink */
+    letter-spacing:0.06em;
+  }
+  .scene-tag{
+    font-size:11.5px; 
+    color: var(--ink-soft); /* Changed to soft dark text */
+    font-weight:500;
+    margin-top:4px;
+  }
+  .pill-status{
+    font-size:11.5px; font-weight:600; color:var(--green);
+    background:rgba(26, 122, 94, 0.08); /* Soft green tint instead of dark transparent */
+    padding:5px 11px; border-radius:100px;
+    border:1px solid rgba(26, 122, 94, 0.15);
+  }
+  .pinpad{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:18px;
+  }
+  .pinpad div{
+    aspect-ratio:1; border-radius:12px;
+    /* Soft grey buttons for the PIN pad keys */
+    background: #F4F5F6; 
+    border:1px solid rgba(15,17,21,0.06);
+    display:flex; align-items:center; justify-content:center;
+    color: var(--ink); /* Changed to dark ink */
+    font-weight:600; font-size:14px;
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .pinpad div.active{
+    background:var(--amber); color:#22160A; border-color:var(--amber);
+  }
+  @media (hover: hover){
+    .pinpad div:hover{
+      background:var(--amber); color:#22160A; border-color:var(--amber);
+      cursor:pointer;
+    }
+  }
+  .pinpad div.tapped{
+    background:var(--amber); color:#22160A; border-color:var(--amber);
+  }
+  .scene-footer{
+    position:relative; z-index:1;
+    display:flex; align-items:center; gap:10px;
+    margin-top:18px;
+  }
+  .avatar-stack{display:flex;}
+  .avatar-stack div{
+    width:26px; height:26px; border-radius:50%;
+    border:2px solid #F4F5F6; /* Matches the new ash background */
+    margin-left:-8px;
+  }
+  .avatar-stack div:first-child{margin-left:0;}
+  .a1{background:#D97757;} .a2{background:#4C8BF5;} .a3{background:var(--amber);}
+  .scene-footer span{
+    color: var(--ink-soft); /* Darkened text for readability on ash */
+    font-size:12.5px;
+  }
+
+  /* ---------- SECTIONS ---------- */
+  section{padding:88px 0;}
+  @media (max-width:760px){ section{padding:56px 0;} }
+  .section-head{max-width:640px; margin-bottom:52px;}
+  .section-head .kicker{
+    font-size:13px; font-weight:600; color:var(--green-deep);
+    text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; display:block;
+  }
+  .section-head h2{font-size:clamp(26px,3.4vw,38px); font-weight:700;}
+  .section-head p{margin-top:14px; font-size:16px; color:var(--ink-soft);}
+
+  /* How it works — steps */
+  .steps{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:22px;
+  }
+  @media (max-width:800px){ .steps{grid-template-columns:1fr;} }
+  .step-card{
+    background: var(--card);
+    /* Initial clean border to match the rest of the site */
+    border: 1px solid rgba(15, 17, 21, 0.12);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    /* Smooth transitions for both the movement and the glowing shadow */
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+                box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+                border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  /* Hover effect: Pop up + Glow */
+  @media (hover: hover) {
+    .step-card:hover {
+      /* Physically lifts the card up slightly */
+      transform: translateY(-5px); 
+      /* Slightly darkens the border edge to make it look sharp */
+      border-color: rgba(15, 17, 21, 0.22); 
+      /* A gorgeous, wide, soft depth glow */
+      box-shadow: 0 10px 30px rgba(15, 17, 21, 0.08), 
+                  0 1px 3px rgba(15, 17, 21, 0.02); 
+    }
+  }
+  .step-num{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:13px; font-weight:700; color:var(--green-deep);
+    background:rgba(26,122,94,0.09);
+    width:30px; height:30px; border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:18px;
+  }
+  .step-card h3{font-size:18px; font-weight:600; margin-bottom:8px;}
+  .step-card p{font-size:14.5px; color:var(--ink-soft);}
+
+  /* Modes: Pay / Receive tabs */
+  .mode-toggle{
+    display:inline-flex; padding:4px; background:var(--surface-dim);
+    border-radius:100px; margin-bottom:36px; gap:4px;
+  }
+  .mode-btn{
+    padding:9px 20px; border-radius:100px; font-size:14px; font-weight:600;
+    color:var(--ink-soft); cursor:pointer; border:none; background:transparent;
+    font-family:inherit;
+  }
+  .mode-btn.active{ background:var(--ink); color:white; }
+  .mode-panel{display:none;}
+  .mode-panel.active{display:block;}
+  .mode-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:center;
+  }
+  @media (max-width:840px){ .mode-grid{grid-template-columns:1fr;} }
+  .feature-list{list-style:none; margin-top:24px; display:flex; flex-direction:column; gap:16px;}
+  .feature-list li{display:flex; gap:12px; font-size:15px; color:var(--ink-soft);}
+  .feature-list li::before{
+    content:'';
+    width:7px; height:7px; border-radius:50%;
+    background:var(--green); margin-top:8px; flex-shrink:0;
+  }
+  .mock-card{
+    background:var(--card); border:1px solid var(--line); border-radius:20px;
+    padding:26px; box-shadow:var(--shadow-soft);
+  }
+  .mock-balance-label{font-size:12.5px; color:var(--ink-soft); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;}
+  .mock-balance{font-family:'Space Grotesk', sans-serif; font-size:36px; font-weight:700; margin-top:8px;}
+  .mock-divider{height:1px; background:var(--line); margin:20px 0;}
+  .mock-line{display:flex; justify-content:space-between; align-items:center; padding:11px 0; font-size:14px;}
+  .mock-line .name{font-weight:500;}
+  .mock-line .meta{color:var(--ink-soft); font-size:12.5px;}
+  .mock-line .amt.out{color:#B5442E;}
+  .mock-line .amt.in{color:var(--green-deep);}
+
+  /* Trust / security band */
+  .trust{
+    /* Clean ash-white background */
+    background: #F4F5F6; 
+    /* Slightly darker, well-defined ash border */
+    border: 1px solid rgba(15, 17, 21, 0.18); 
+    color: var(--ink); 
+    border-radius:26px;
+    padding:52px 44px;
+  }
+  @media (max-width:760px){ .trust{padding:36px 24px;} }
+  .trust-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:36px; margin-top:36px;
+  }
+  @media (max-width:800px){ .trust-grid{grid-template-columns:1fr;} }
+  .trust h2{font-size:clamp(24px,3vw,32px); max-width:20ch;}
+  /* Soft dark text for description paragraph */
+  .trust p.lead{color: var(--ink-soft); margin-top:14px; max-width:52ch; font-size:15.5px;}
+  .trust-item .num {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--green-deep); /* Changed from var(--amber) to green */
+}
+  /* Soft dark text for item labels */
+  .trust-item .lbl{margin-top:6px; font-size:14px; color: var(--ink-soft);}
+
+  /* CTA band */
+  .cta-band{
+    background: linear-gradient(155deg, var(--green) 0%, var(--green-deep) 100%);
+    border-radius:26px; padding:56px 44px; text-align:center; color:white;
+  }
+  @media (max-width:760px){ .cta-band{padding:40px 24px;} }
+  .cta-band h2{font-size:clamp(26px,3.6vw,36px); max-width:22ch; margin:0 auto;}
+  .cta-band p{margin-top:14px; color:rgba(255,255,255,0.85); font-size:15.5px;}
+  .cta-band .hero-actions{justify-content:center; margin-top:28px;}
+  .cta-band .btn-primary{background:white; color:var(--green-deep);}
+  .cta-band .btn-ghost{border-color:rgba(255,255,255,0.35); color:white;}
+  .cta-band .btn-ghost:hover{background:rgba(255,255,255,0.08);}
+
+  /* Footer */
+footer {
+  border-top: 1px solid var(--line);
+  padding: 64px 0 40px;
+  background: var(--card); /* Slight structural contrast for the footer */
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.2fr repeat(2, 0.9fr);
+  gap: 48px;
+  margin-bottom: 48px;
+}
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.footer-slogan {
+  font-size: 14px;
+  color: var(--ink-soft);
+  max-width: 28ch;
+  line-height: 1.4;
+}
+.footer-col-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+.footer-col-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.footer-col-links a {
+  font-size: 14px;
+  color: var(--ink-soft);
+  transition: color 0.15s ease;
+}
+.footer-col-links a:hover {
+  color: var(--green);
+}
+.favicon-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--green);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+@media (max-width: 760px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+}
+
+  /* ---------- TYPEWRITER EFFECT ---------- */
+  .cursor {
+    display: inline-block;
+    width: 3px;
+    height: 1em;
+    background-color: var(--green);
+    margin-left: 4px;
+    vertical-align: middle;
+    animation: blink 0.8s infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <nav class="wrap">
+    <div class="logo">
+      <div class="logo-mark">M</div>
+      MoneyPadi
+    </div>
+    <div class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#modes">For students &amp; vendors</a>
+      <a href="#trust">Security</a>
+    </div>
+    <div class="nav-cta">
+      <a href="login.html" class="btn btn-ghost btn-sm only-desktop">Log in</a>
+      <a href="login.html#signup" class="btn btn-primary btn-sm">Create your wallet</a>
+      <button class="hamburger" id="hamburgerBtn" aria-label="Open menu" aria-expanded="false">
+        <span></span>
+      </button>
+    </div>
+  </nav>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#how-it-works">How it works</a>
+    <a href="#modes">For students &amp; vendors</a>
+    <a href="#trust">Security</a>
+    <div class="mobile-cta">
+      <a href="login.html" class="btn btn-ghost btn-sm">Log in</a>
+      <a href="login.html#signup" class="btn btn-primary btn-sm">Get started</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="eyebrow"><span class="eyebrow-dot"></span> Built for Covenant University</span>
+        <h1>Forgot your card at the hostel? <em>No wahala.</em></h1>
+        <p class="lead">MoneyPadi lets you pay shuttle drivers and campus vendors with just a code and a PIN, even in spots where there's no network connectivity. The vendor's connection carries it, so you don't need one.</p>
+        <div class="hero-actions">
+          <a href="login.html#signup" class="btn btn-primary">Get started</a>
+          <a href="#how-it-works" class="btn btn-ghost">See how it works</a>
+        </div>
+        <div class="hero-note">
+          <span>🎓</span> Open to verified Covenant University students &amp; campus vendors
+        </div>
+      </div>
+
+      <div class="scene">
+        <div class="scene-label">
+          <span>Shuttle stand · Chapel</span>
+          <span>Vendor device · Online</span>
+        </div>
+
+        <div class="scene-card">
+          <div class="scene-row">
+            <div>
+              <div class="scene-code">2302970</div>
+              <div class="scene-tag">Student code · Chidera A.</div>
+            </div>
+            <div class="pill-status">₦200 requested</div>
+          </div>
+
+          <div class="pinpad">
+            <div>1</div><div>2</div><div>3</div>
+            <div>4</div><div class="active">5</div><div>6</div>
+            <div>7</div><div>8</div><div>9</div>
+          </div>
+        </div>
+
+        <div class="scene-footer">
+          <div class="avatar-stack">
+            <div class="a1"></div><div class="a2"></div><div class="a3"></div>
+          </div>
+          <span>Student enters PIN on the vendor's screen to confirm</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how-it-works">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">How it works</span>
+        <h2 id="typewriter-headline" style="min-height: 2.2em;">Same trust as using your card, minus the card.</h2>
+        <p>The vendor's phone does the talking to our servers. You just need your code and your PIN, that's it.</p>
+      </div>
+      <div class="steps">
+        <div class="step-card">
+          <div class="step-num">01</div>
+          <h3>Show your QR code</h3>
+          <p>You can download your unique wallet QR code and it works without network. It doesn't change, it's just like having a digital ATM card.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">02</div>
+          <h3>Vendor enters the amount</h3>
+          <p>The driver or vendor types in what you owe on their own connected device, e.g ₦200 for shuttle, or ₦1,000 for a haircut, whatever the price is.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-num">03</div>
+          <h3>You confirm with your PIN</h3>
+          <p>Type your PIN on their screen to authorize it. Nobody can charge your wallet without it, and every charge is capped.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="modes">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="kicker">One account, two modes</span>
+        <h2>Pay as a student. Get paid as a vendor. Same wallet.</h2>
+        <p>Are you a shuttle driver? A vendor? Or a student? Switch modes in one tap.</p>
+      </div>
+
+      <div class="mode-toggle" role="tablist">
+        <button class="mode-btn active" data-mode="pay">Pay</button>
+        <button class="mode-btn" data-mode="receive">Receive</button>
+      </div>
+
+      <div class="mode-panel active" id="panel-pay">
+        <div class="mode-grid">
+          <div>
+            <h3 style="font-size:22px; font-weight:600;">Built for the everyday campus spend</h3>
+            <ul class="feature-list">
+              <li>Top up from your bank card or transfer, anytime you have WI-FI</li>
+              <li>Your QR code stays visible even offline</li>
+              <li>Every charge shows up in your history, with the vendor's name attached</li>
+              <li>Instant alert the moment a charge lands, so nothing surprises you</li>
+            </ul>
+          </div>
+          <div class="mock-card">
+            <div class="mock-balance-label">Wallet balance</div>
+            <div class="mock-balance">₦4,250.00</div>
+            <div class="mock-divider"></div>
+            <div class="mock-line">
+              <div>
+                <div class="name">Shuttle · Chapel</div>
+                <div class="meta">Today, 8:14 AM</div>
+              </div>
+              <div class="amt out">−₦200</div>
+            </div>
+            <div class="mock-line">
+              <div>
+                <div class="name">Hair salon</div>
+                <div class="meta">Yesterday, 1:02 PM</div>
+              </div>
+              <div class="amt out">−₦900</div>
+            </div>
+            <div class="mock-line">
+              <div>
+                <div class="name">Wallet top-up</div>
+                <div class="meta">Yesterday, 9:40 AM</div>
+              </div>
+              <div class="amt in">+₦5,000</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mode-panel" id="panel-receive">
+        <div class="mode-grid">
+          <div>
+            <h3 style="font-size:22px; font-weight:600;">Get paid without chasing cash or change</h3>
+            <ul class="feature-list">
+              <li>Enter the student's code, type the amount, done. No POS terminal needed</li>
+              <li>Earnings build up in your own wallet in real time</li>
+              <li>Withdraw to your bank account whenever you want, no per-transaction fees</li>
+              <li>Every charge is tied to your account, so there's always a clear record</li>
+            </ul>
+          </div>
+          <div class="mock-card">
+            <div class="mock-balance-label">Today's earnings</div>
+            <div class="mock-balance">₦12,600.00</div>
+            <div class="mock-divider"></div>
+            <div class="mock-line">
+              <div>
+                <div class="name">Chidera A. · A29-4K7</div>
+                <div class="meta">2 mins ago</div>
+              </div>
+              <div class="amt in">+₦200</div>
+            </div>
+            <div class="mock-line">
+              <div>
+                <div class="name">Tobi O. · F81-2M4</div>
+                <div class="meta">14 mins ago</div>
+              </div>
+              <div class="amt in">+₦200</div>
+            </div>
+            <div class="mock-line">
+              <div>
+                <div class="name">Withdraw to GTBank</div>
+                <div class="meta">This morning</div>
+              </div>
+              <div class="amt out">−₦8,000</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="trust">
+    <div class="wrap">
+      <div class="trust">
+        <h2>Limits set for your protection.</h2>
+        <p class="lead">MoneyPadi applies strict security measures to protect your funds. Limits may be increased later on.</p>
+        <div class="trust-grid">
+          <div class="trust-item">
+            <div class="num">₦5,000</div>
+            <div class="lbl">Maximum per single transaction, enforced on every charge</div>
+          </div>
+          <div class="trust-item">
+            <div class="num">₦20,000</div>
+            <div class="lbl">Daily cap per wallet, no matter how many vendors you pay</div>
+          </div>
+          <div class="trust-item">
+            <div class="num">4 tries</div>
+            <div class="lbl">Wrong PIN attempts before your wallet locks and needs your own login to unlock</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="cta-band">
+        <h2>Never let a forgotten card slow you down again.</h2>
+        <p>Sign up with your school email and you'll be paying vendors in a couple of minutes.</p>
+        <div class="hero-actions">
+          <a href="login.html#signup" class="btn btn-primary">Create your wallet</a>
+          <a href="login.html" class="btn btn-ghost">I already have an account</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <!-- Brand & Slogan Column -->
+      <div class="footer-brand">
+        <div class="logo">
+          <!-- Favicon Placeholder Container -->
+          <div class="favicon-placeholder" title="Favicon Placeholder">M</div>
+          MoneyPadi
+        </div>
+        <p class="footer-slogan">The POS terminal in your pocket.</p>
+      </div>
+
+      <!-- Navigation Column 1 -->
+      <div>
+        <div class="footer-col-title">Platform</div>
+        <ul class="footer-col-links">
+          <li><a href="#">Home</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="blog.html">Blog</a></li>
+        </ul>
+      </div>
+
+      <!-- Navigation Column 2 -->
+      <div>
+        <div class="footer-col-title">Support</div>
+        <ul class="footer-col-links">
+          <li><a href="help.html">Help &amp; Support</a></li>
+          <li><a href="#trust">Security Limits</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Fine Print -->
+    <div style="border-top: 1px solid var(--line); padding-top: 24px;" class="footer-row">
+      <div class="footer-fine">
+        <center>&copy; 2026 MoneyPadi.</center>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+
+// Hamburger nav toggle for tablet/mobile
+const hamburgerBtn = document.getElementById('hamburgerBtn');
+const mobileMenu = document.getElementById('mobileMenu');
+
+hamburgerBtn.addEventListener('click', () => {
+  const isOpen = mobileMenu.classList.toggle('open');
+  hamburgerBtn.classList.toggle('open', isOpen);
+  hamburgerBtn.setAttribute('aria-expanded', isOpen);
+});
+
+mobileMenu.querySelectorAll('a').forEach(link => {
+  link.addEventListener('click', () => {
+    mobileMenu.classList.remove('open');
+    hamburgerBtn.classList.remove('open');
+    hamburgerBtn.setAttribute('aria-expanded', 'false');
+  });
+});
+
+  // Pay / Receive mode toggle on the landing page's "one account" section
+  const modeButtons = document.querySelectorAll('.mode-btn');
+  const modePanels = {
+    pay: document.getElementById('panel-pay'),
+    receive: document.getElementById('panel-receive')
+  };
+
+  modeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.mode;
+
+      modeButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      Object.values(modePanels).forEach(panel => panel.classList.remove('active'));
+      modePanels[mode].classList.add('active');
+    });
+  });
+
+  // Animate the hero PIN pad key to feel faster and more dynamic
+  const pinKeys = document.querySelectorAll('.pinpad div');
+  let activeIndex = 4; // starts on "5"
+  
+  setInterval(() => {
+    pinKeys[activeIndex].classList.remove('active');
+    activeIndex = (activeIndex + 1) % pinKeys.length;
+    pinKeys[activeIndex].classList.add('active');
+  }, 600); // Changed from 1800ms to 600ms for faster typing
+
+  // Mobile: tapping a key glows it briefly, since there's no hover on touch
+  pinKeys.forEach(key => {
+    key.addEventListener('click', () => {
+      key.classList.add('tapped');
+      setTimeout(() => key.classList.remove('tapped'), 300); // Shorter glow to match the speed
+    });
+  });
+
+  // ---------- LOOPING TYPEWRITER SCRIPT ----------
+  const textToType = "Same trust as tapping your card, minus the card.";
+  const targetElement = document.getElementById('typewriter-headline');
+
+  function typeWriterLoop(element, text) {
+    let index = 0;
+    let isDeleting = false;
+    element.innerHTML = ''; // Clear initial element
+    
+    // Append the persistent blinking cursor
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    element.appendChild(cursor);
+
+    function tick() {
+      if (!isDeleting) {
+        // --- TYPING STATE ---
+        if (index < text.length) {
+          // Insert the next character right before the cursor
+          cursor.before(text.charAt(index));
+          index++;
+          // Normal typing speed (40ms)
+          setTimeout(tick, 40); 
+        } else {
+          // Finished typing! Wait 3 seconds before starting to delete
+          isDeleting = true;
+          setTimeout(tick, 3000); 
+        }
+      } else {
+        // --- DELETING STATE ---
+        if (index > 0) {
+          // Remove the character right before the cursor
+          cursor.previousSibling.remove();
+          index--;
+          // Deleting is slightly faster (20ms) for a snappy feel
+          setTimeout(tick, 20); 
+        } else {
+          // Finished deleting! Wait 1 second, then start typing again
+          isDeleting = false;
+          setTimeout(tick, 1000); 
+        }
+      }
+    }
+    
+    tick();
+  }
+
+  // Uses IntersectionObserver to trigger the loop once the element is visible
+  const typewriterObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        typeWriterLoop(targetElement, textToType);
+        typewriterObserver.unobserve(entry.target); // Run only once to start the infinite loop
+      }
+    });
+  }, { threshold: 0.4 });
+
+  typewriterObserver.observe(targetElement);
+</script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNj6C0cD2AnVjeN6auVeUmK5A9tTcj5nU",
+    authDomain: "moneypadi.firebaseapp.com",
+    projectId: "moneypadi",
+    storageBucket: "moneypadi.firebasestorage.app",
+    messagingSenderId: "709790962707",
+    appId: "1:709790962707:web:0c31584ea0009ad0315be6"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  onAuthStateChanged(auth, (user) => {
+  if (user) {
+    window.location.replace("dashboard.html");
+  }
+});
+</script>
+</body>
+</html>

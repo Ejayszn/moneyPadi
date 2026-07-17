@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#12513E" />
+<meta name="description" content="Log in or create your MoneyPadi wallet. For Covenant University students, vendors, and drivers." />
+<title>Log in | MoneyPadi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1115;
+    --ink-soft:#3A3F47;
+    --surface:#F7F5F0;
+    --surface-dim:#EDEAE1;
+    --card:#FFFFFF;
+    --green:#1A7A5E;
+    --green-deep:#12513E;
+    --amber:#E8A33D;
+    --line:rgba(15,17,21,0.10);
+
+    /* Campus panel accent — same green as the rest of the product. */
+    --cu-gold:#E8A33D;
+
+    --radius:18px;
+    --shadow-soft: 0 1px 2px rgba(15,17,21,0.04), 0 8px 24px rgba(15,17,21,0.06);
+    --shadow-pop: 0 4px 10px rgba(15,17,21,0.08), 0 20px 40px rgba(15,17,21,0.10);
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--surface);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3, .display{
+    font-family:'Space Grotesk', system-ui, sans-serif;
+    letter-spacing:-0.01em;
+    line-height:1.1;
+  }
+  a{color:inherit; text-decoration:none;}
+  button{font-family:inherit;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ---------- LAYOUT ---------- */
+  .auth-shell{
+    min-height:100vh;
+  }
+
+  .logo{
+    display:flex; align-items:center; gap:9px;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700; font-size:19px;
+  }
+  .logo-mark{
+    width:30px; height:30px; border-radius:9px;
+    background:linear-gradient(155deg, var(--green) 0%, var(--green-deep) 100%);
+    display:flex; align-items:center; justify-content:center;
+    color:white; font-size:15px; font-weight:700;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+    flex-shrink:0;
+  }
+
+  /* ---------- AUTH FORM (now the whole page, at every width) ---------- */
+  .form-panel{
+    width:100%;
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:48px 24px;
+  }
+  .form-wrap{
+    width:100%; max-width:400px;
+  }
+  .form-wrap .logo{
+    margin-bottom:28px;
+  }
+  @media (max-width: 500px){
+    .form-panel{padding:40px 20px;}
+  }
+
+  .form-head h2{font-size:26px; font-weight:700;}
+  .form-head p{margin-top:8px; font-size:14.5px; color:var(--ink-soft);}
+
+  .tab-toggle{
+    display:inline-flex; padding:4px; background:var(--surface-dim);
+    border-radius:100px; margin:24px 0 28px; gap:4px;
+  }
+  .tab-btn{
+    padding:9px 22px; border-radius:100px; font-size:14px; font-weight:600;
+    color:var(--ink-soft); cursor:pointer; border:none; background:transparent;
+  }
+  .tab-btn.active{ background:var(--ink); color:white; }
+
+  .auth-panel{display:none; flex-direction:column; gap:16px;}
+  .auth-panel.active{display:flex;}
+
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field label{font-size:13px; font-weight:600; color:var(--ink-soft);}
+  .field input{
+    padding:12px 14px;
+    border-radius:11px;
+    border:1px solid var(--line);
+    background:var(--card);
+    font-size:14.5px;
+    font-family:inherit;
+    color:var(--ink);
+    outline-offset:2px;
+  }
+  .field input:focus-visible{ outline:2px solid var(--green); border-color:var(--green); }
+  .field-hint{font-size:12px; color:var(--ink-soft);}
+  .password-wrap{ position:relative; display:flex; }
+.password-wrap input{ flex:1; padding-right:42px; }
+.pw-toggle{
+  position:absolute; right:4px; top:50%; transform:translateY(-50%);
+  width:34px; height:34px; border:none; background:transparent;
+  cursor:pointer; font-size:16px; opacity:0.55;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:8px;
+}
+.pw-toggle:hover{ opacity:0.9; background:var(--surface-dim); }
+
+  .terms-check{
+    display:flex; gap:10px; align-items:flex-start;
+    font-size:13px;
+    color:var(--ink-soft);
+    line-height:1.45;
+  }
+  .terms-check input{ margin-top:3px; flex-shrink:0; width:16px; height:16px; accent-color:var(--green); }
+  .terms-check a{ color:var(--ink); font-weight:600; text-decoration:underline; text-underline-offset:2px; }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:13px 20px;
+    border-radius:11px;
+    font-weight:600; font-size:14.5px;
+    border:1px solid transparent;
+    cursor:pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    width:100%;
+  }
+  .btn-primary{ background:var(--ink); color:white; }
+  .btn-primary:hover{ transform:translateY(-1px); box-shadow:var(--shadow-pop); }
+  .btn-primary:disabled{ opacity:0.6; cursor:not-allowed; transform:none; box-shadow:none; }
+  .btn-google{
+    background:var(--card); color:var(--ink); border-color:var(--line);
+  }
+  .btn-google:hover{ background:var(--surface-dim); }
+
+  .divider{
+    display:flex; align-items:center; gap:12px;
+    font-size:12.5px; color:var(--ink-soft);
+    margin:2px 0;
+  }
+  .divider::before, .divider::after{
+    content:''; flex:1; height:1px; background:var(--line);
+  }
+
+  .forgot-row{
+    display:flex; justify-content:flex-end; margin-top:-6px;
+  }
+  .forgot-row a{font-size:13px; color:var(--green-deep); font-weight:600;}
+  .forgot-row a:hover{text-decoration:underline;}
+
+  .form-footer{
+    margin-top:24px; font-size:13.5px; color:var(--ink-soft); text-align:center;
+  }
+  .form-footer a{color:var(--green-deep); font-weight:600;}
+
+  .form-error{
+    display:none;
+    font-size:13px; color:#B5442E;
+    background:rgba(181,68,46,0.08);
+    border:1px solid rgba(181,68,46,0.2);
+    border-radius:10px;
+    padding:10px 13px;
+  }
+  .form-error.visible{display:block;}
+
+  .back-home{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:13.5px; font-weight:600; color:var(--ink-soft);
+    margin-bottom:8px;
+  }
+  .back-home:hover{color:var(--ink);}
+</style>
+</head>
+<body>
+
+<div class="auth-shell">
+
+  <!-- Auth form: the whole page, at every width -->
+  <div class="form-panel">
+    <div class="form-wrap">
+      <a href="index.html" class="back-home">← Back to home</a>
+
+      <div class="logo">
+        <div class="logo-mark">M</div>
+        MoneyPadi
+      </div>
+
+      <div class="form-head">
+        <h2 id="formTitle">Welcome back</h2>
+        <p id="formSubtitle">Log in to open your wallet.</p>
+      </div>
+
+      <div class="tab-toggle" role="tablist">
+        <button class="tab-btn active" data-tab="login" id="tabLogin">Log in</button>
+        <button class="tab-btn" data-tab="signup" id="tabSignup">Sign up</button>
+      </div>
+
+      <div class="form-error" id="formError"></div>
+
+      <!-- LOG IN -->
+      <form class="auth-panel active" id="panel-login">
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email" required />
+        </div>
+        <div class="field">
+        <label for="loginPassword">Password</label>
+        <div class="password-wrap">
+            <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" required />
+            <button type="button" class="pw-toggle" data-target="loginPassword" aria-label="Show password">👁</button>
+        </div>
+        </div>
+        <div class="forgot-row"><a href="#" id="forgotLink">Forgot password?</a></div>
+        <button type="submit" class="btn btn-primary" id="loginSubmit">Log in</button>
+        <div class="divider">or</div>
+        <button type="button" class="btn btn-google" id="googleLogin">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.66 9c0-.59.1-1.17.29-1.7V4.97H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.03l2.97-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97l2.97 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+          Continue with Google
+        </button>
+      </form>
+
+      <!-- SIGN UP -->
+      <form class="auth-panel" id="panel-signup">
+        <div class="field">
+          <label for="signupName">Full name</label>
+          <input type="text" id="signupName" placeholder="Chidera Adeyemi" autocomplete="name" required />
+        </div>
+        <div class="field">
+          <label for="signupEmail">Email</label>
+          <input type="email" id="signupEmail" placeholder="you@example.com" autocomplete="email" required />
+        </div>
+        <div class="field">
+        <label for="signupPassword">Password</label>
+        <div class="password-wrap">
+            <input type="password" id="signupPassword" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required />
+            <button type="button" class="pw-toggle" data-target="signupPassword" aria-label="Show password">👁</button>
+        </div>
+        </div>
+        <label class="terms-check">
+          <input type="checkbox" id="signupAgreeTerms" required />
+          <span>I agree to the <a href="terms.html" target="_blank">Terms of Service</a> and <a href="privacy.html" target="_blank">Privacy Policy</a>.</span>
+        </label>
+        <button type="submit" class="btn btn-primary" id="signupSubmit">Create your wallet</button>
+        <div class="divider">or</div>
+        <button type="button" class="btn btn-google" id="googleSignup">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.66 9c0-.59.1-1.17.29-1.7V4.97H.98A9 9 0 0 0 0 9c0 1.45.35 2.83.98 4.03l2.97-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .98 4.97l2.97 2.33C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+          Continue with Google
+        </button>
+      </form>
+
+      <div class="form-footer" id="formFooter">
+        New to MoneyPadi? <a href="#" id="footerToSignup">Create a wallet</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getAuth,
+    onAuthStateChanged,
+    setPersistence,
+    browserLocalPersistence,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signInWithPopup,
+    GoogleAuthProvider,
+    sendPasswordResetEmail,
+    updateProfile
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import {
+  getFirestore,
+  doc,
+  setDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNj6C0cD2AnVjeN6auVeUmK5A9tTcj5nU",
+    authDomain: "moneypadi.firebaseapp.com",
+    projectId: "moneypadi",
+    storageBucket: "moneypadi.firebasestorage.app",
+    messagingSenderId: "709790962707",
+    appId: "1:709790962707:web:0c31584ea0009ad0315be6"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  await setPersistence(auth, browserLocalPersistence);
+
+  const googleProvider = new GoogleAuthProvider();
+  // No domain restriction here — vendors and shuttle drivers won't
+  // necessarily have a school email, so any Google account is fine.
+  // If you ever add a "verified student" perk, gate that server-side
+  // off the stored email, not by restricting who can sign in at all.
+
+  // If a session already exists, skip the form entirely.
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      window.location.replace("dashboard.html");
+    }
+  });
+
+  // ---------- Tab switching ----------
+  const tabLogin = document.getElementById("tabLogin");
+  const tabSignup = document.getElementById("tabSignup");
+  const panelLogin = document.getElementById("panel-login");
+  const panelSignup = document.getElementById("panel-signup");
+  const formTitle = document.getElementById("formTitle");
+  const formSubtitle = document.getElementById("formSubtitle");
+  const formFooter = document.getElementById("formFooter");
+  const formError = document.getElementById("formError");
+
+  document.querySelectorAll('.pw-toggle').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const input = document.getElementById(btn.dataset.target);
+    const isHidden = input.type === "password";
+    input.type = isHidden ? "text" : "password";
+    btn.textContent = isHidden ? "🙈" : "👁";
+    btn.setAttribute('aria-label', isHidden ? "Hide password" : "Show password");
+  });
+});
+
+  function showError(message) {
+    formError.textContent = message;
+    formError.classList.add("visible");
+  }
+  function clearError() {
+    formError.textContent = "";
+    formError.classList.remove("visible");
+  }
+
+  function setTab(tab) {
+    clearError();
+    const isLogin = tab === "login";
+    tabLogin.classList.toggle("active", isLogin);
+    tabSignup.classList.toggle("active", !isLogin);
+    panelLogin.classList.toggle("active", isLogin);
+    panelSignup.classList.toggle("active", !isLogin);
+
+    if (isLogin) {
+      formTitle.textContent = "Welcome back";
+      formSubtitle.textContent = "Log in to open your wallet.";
+      formFooter.innerHTML = 'New to MoneyPadi? <a href="#" id="footerToSignup">Create a wallet</a>';
+    } else {
+      formTitle.textContent = "Create your wallet";
+      formSubtitle.textContent = "Sign up with your email or Google account.";
+      formFooter.innerHTML = 'Already have a wallet? <a href="#" id="footerToLogin">Log in</a>';
+    }
+    attachFooterLink();
+  }
+
+  function attachFooterLink() {
+    const toSignup = document.getElementById("footerToSignup");
+    const toLogin = document.getElementById("footerToLogin");
+    if (toSignup) toSignup.addEventListener("click", (e) => { e.preventDefault(); setTab("signup"); });
+    if (toLogin) toLogin.addEventListener("click", (e) => { e.preventDefault(); setTab("login"); });
+  }
+  attachFooterLink();
+
+  tabLogin.addEventListener("click", () => setTab("login"));
+  tabSignup.addEventListener("click", () => setTab("signup"));
+
+  // ---------- Email/password login ----------
+  panelLogin.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearError();
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+    const submitBtn = document.getElementById("loginSubmit");
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Logging in…";
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      window.location.replace("dashboard.html");
+    } catch (err) {
+      showError(friendlyAuthError(err));
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Log in";
+    }
+  });
+
+  // ---------- Email/password signup ----------
+  panelSignup.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearError();
+    const name = document.getElementById("signupName").value.trim();
+    const email = document.getElementById("signupEmail").value.trim();
+    const password = document.getElementById("signupPassword").value;
+    const agreedToTerms = document.getElementById("signupAgreeTerms").checked;
+    const submitBtn = document.getElementById("signupSubmit");
+
+    if (!agreedToTerms) {
+      showError("You need to agree to the Terms of Service and Privacy Policy to continue.");
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Creating wallet…";
+    try {
+  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  await updateProfile(cred.user, { displayName: name });
+
+  // Immutable consent record — separate from the wallet doc,
+  // which the Cloud Function owns per architecture doc section 6.
+  await setDoc(doc(db, "consent", cred.user.uid), {
+    uid: cred.user.uid,
+    agreedToTerms: true,
+    agreedToTermsAt: serverTimestamp(),
+    termsVersion: "1.0" // bump this string whenever your ToS/Privacy Policy changes
+  });
+
+  window.location.replace("dashboard.html?setup=pin");
+} catch (err) {
+  showError(friendlyAuthError(err));
+  submitBtn.disabled = false;
+  submitBtn.textContent = "Create your wallet";
+}
+  });
+
+  // ---------- Google sign-in (both buttons do the same thing) ----------
+  async function handleGoogleAuth() {
+    clearError();
+    try {
+      await signInWithPopup(auth, googleProvider);
+      window.location.replace("dashboard.html");
+    } catch (err) {
+      showError(friendlyAuthError(err));
+    }
+  }
+  document.getElementById("googleLogin").addEventListener("click", handleGoogleAuth);
+  document.getElementById("googleSignup").addEventListener("click", handleGoogleAuth);
+
+  // ---------- Forgot password ----------
+  document.getElementById("forgotLink").addEventListener("click", async (e) => {
+    e.preventDefault();
+    clearError();
+    const email = document.getElementById("loginEmail").value.trim();
+    if (!email) {
+      showError("Enter your email above first, then tap \"Forgot password?\" again.");
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      showError("Reset link sent — check your email inbox.");
+    } catch (err) {
+      showError(friendlyAuthError(err));
+    }
+  });
+
+  function friendlyAuthError(err) {
+    const code = err && err.code ? err.code : "";
+    const map = {
+      "auth/invalid-email": "That email address doesn't look right.",
+      "auth/user-not-found": "No wallet found for that email. Try signing up instead.",
+      "auth/wrong-password": "That password doesn't match. Try again or reset it.",
+      "auth/invalid-credential": "Email or password is incorrect.",
+      "auth/email-already-in-use": "A wallet already exists for that email. Try logging in.",
+      "auth/weak-password": "Choose a password with at least 8 characters.",
+      "auth/popup-closed-by-user": "Google sign-in was closed before finishing."
+    };
+    return map[code] || "Something went wrong. Please try again.";
+  }
+</script>
+
+</body>
+</html>
