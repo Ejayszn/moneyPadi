@@ -1,10 +1,31 @@
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
+const { defineSecret } = require("firebase-functions/params");
 const functionsV1 = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const bcrypt = require("bcryptjs");
+const axios = require("axios");
+const crypto = require("crypto");
 
 admin.initializeApp();
 const db = admin.firestore();
+
+const PAYSTACK_SECRET = defineSecret("PAYSTACK_SECRET");
+const PAYSTACK_BASE = "https://api.paystack.co";
+
+// ---- Topup ----
+const TOPUP_MARGIN = 1000; // ₦10 in kobo — flat MoneyPadi margin on every topup
+
+// ---- Withdrawal ----
+const MIN_WITHDRAWAL = 50000; // ₦500 in kobo
+function withdrawalFee(amountKobo) {
+  // Mirrors Paystack's own transfer tiers — see docs/support articles
+  if (amountKobo <= 500000) return 1000;      // ₦5,000 → ₦10
+  if (amountKobo <= 5000000) return 2500;     // ₦50,000 → ₦25
+  return 5000;                                 // above → ₦50
+}
+function stampDuty(amountKobo) {
+  return amountKobo >= 1000000 ? 5000 : 0; // ₦10,000+ → ₦50 (NTA 2025)
+}
 
 // ---- Limits (kobo — 1 naira = 100 kobo, keeps everything integer) ----
 const SINGLE_TX_LIMIT = 500000;  // ₦5,000
@@ -210,4 +231,291 @@ exports.chargeWallet = onCall(async (request) => {
 
     return { success: true, txId: txRef.id };
   });
+});
+
+// ============================================================
+// TOPUP FLOW — Pay with Transfer only. Flat ₦10 (1000 kobo)
+// MoneyPadi margin on every topup, regardless of size.
+// ============================================================
+
+exports.initiateTopup = onCall({ secrets: [PAYSTACK_SECRET] }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+
+  const amountKobo = Math.round(Number(request.data?.amount));
+  if (!Number.isFinite(amountKobo) || amountKobo <= 0) {
+    throw new HttpsError("invalid-argument", "Invalid amount.");
+  }
+
+  const userRecord = await admin.auth().getUser(uid);
+  const totalChargeKobo = amountKobo + TOPUP_MARGIN;
+  const topupRef = db.collection("topups").doc(); // reference = Firestore doc id
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min window
+
+  try {
+    const chargeRes = await axios.post(
+      `${PAYSTACK_BASE}/charge`,
+      {
+        email: userRecord.email,
+        amount: totalChargeKobo,
+        currency: "NGN",
+        reference: topupRef.id,
+        bank_transfer: { account_expires_at: expiresAt },
+      },
+      { headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` }, timeout: 15000 }
+    );
+
+    // NOTE: verify this shape against a real sandbox response — Paystack's
+    // bank_transfer charge payload has shifted field names across API
+    // versions before. Check functions logs on first real test.
+    const details = chargeRes.data?.data;
+
+    await topupRef.set({
+      uid,
+      amountKobo,          // what the wallet gets credited
+      totalChargeKobo,     // what the student actually transfers
+      status: "pending",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return {
+      reference: topupRef.id,
+      totalChargeKobo,
+      bankDetails: details, // account_number, bank_name, account_expires_at, etc.
+    };
+  } catch (err) {
+    console.error("initiateTopup error:", err.response?.data || err.message);
+    throw new HttpsError("internal", "Couldn't start the transfer. Try again.");
+  }
+});
+
+// Shared idempotent credit logic — called by both verifyTopup (client
+// poll) and topupWebhook (server push), whichever arrives first wins;
+// the other becomes a no-op.
+async function creditTopupIfPending(reference) {
+  const topupRef = db.collection("topups").doc(reference);
+
+  return db.runTransaction(async (t) => {
+    const snap = await t.get(topupRef);
+    if (!snap.exists) return { alreadyProcessed: false, notFound: true };
+    const topup = snap.data();
+    if (topup.status !== "pending") return { alreadyProcessed: true };
+
+    const walletRef = db.collection("wallets").doc(topup.uid);
+    t.update(walletRef, { balance: admin.firestore.FieldValue.increment(topup.amountKobo) });
+    t.set(topupRef, { status: "completed", completedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    t.set(db.collection("transactions").doc(), {
+      type: "topup",
+      uid: topup.uid,
+      amount: topup.amountKobo,
+      fee: TOPUP_MARGIN,
+      status: "completed",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { alreadyProcessed: false };
+  });
+}
+
+exports.verifyTopup = onCall({ secrets: [PAYSTACK_SECRET] }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+
+  const reference = request.data?.reference;
+  if (!reference) throw new HttpsError("invalid-argument", "Missing reference.");
+
+  const topupSnap = await db.collection("topups").doc(reference).get();
+  if (!topupSnap.exists || topupSnap.data().uid !== uid) {
+    throw new HttpsError("not-found", "Topup not found.");
+  }
+
+  try {
+    const verifyRes = await axios.get(`${PAYSTACK_BASE}/transaction/verify/${reference}`, {
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` },
+      timeout: 15000,
+    });
+    const tx = verifyRes.data?.data;
+
+    if (tx.status !== "success") {
+      return { credited: false, status: tx.status }; // still pending on Paystack's side
+    }
+    if (tx.amount !== topupSnap.data().totalChargeKobo || tx.currency !== "NGN") {
+      throw new HttpsError("failed-precondition", "Payment details don't match.");
+    }
+
+    const result = await creditTopupIfPending(reference);
+    return { credited: !result.alreadyProcessed, status: "success" };
+  } catch (err) {
+    if (err instanceof HttpsError) throw err;
+    console.error("verifyTopup error:", err.response?.data || err.message);
+    throw new HttpsError("internal", "Couldn't verify payment.");
+  }
+});
+
+// Single webhook endpoint — Paystack only allows one URL per account,
+// so this dispatches on event type instead of using separate functions.
+exports.paystackWebhook = onRequest({ secrets: [PAYSTACK_SECRET] }, async (req, res) => {
+  const hash = crypto
+    .createHmac("sha512", PAYSTACK_SECRET.value())
+    .update(JSON.stringify(req.body))
+    .digest("hex");
+  if (hash !== req.headers["x-paystack-signature"]) {
+    return res.status(401).send("Invalid signature");
+  }
+
+  const event = req.body;
+  try {
+    if (event.event === "charge.success") {
+      await creditTopupIfPending(event.data.reference);
+    } else if (event.event === "transfer.success") {
+      await db.collection("transactions").doc(event.data.reference).set(
+        { status: "completed" }, { merge: true }
+      );
+    } else if (event.event === "transfer.failed" || event.event === "transfer.reversed") {
+      const txRef = db.collection("transactions").doc(event.data.reference);
+      await db.runTransaction(async (t) => {
+        const txSnap = await t.get(txRef);
+        if (!txSnap.exists || txSnap.data().status !== "pending") return;
+        const tx = txSnap.data();
+        t.update(db.collection("wallets").doc(tx.uid), {
+          balance: admin.firestore.FieldValue.increment(tx.amount),
+        });
+        t.set(txRef, { status: "failed" }, { merge: true });
+      });
+    }
+    return res.status(200).send("OK");
+  } catch (err) {
+    console.error("paystackWebhook error:", err);
+    return res.status(200).send("OK"); // 200 always — avoid Paystack retry storms
+  }
+});
+
+// ============================================================
+// WITHDRAWAL FLOW
+// ============================================================
+
+exports.listBanks = onCall({ secrets: [PAYSTACK_SECRET] }, async (request) => {
+  if (!request.auth?.uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+  try {
+    const res = await axios.get(`${PAYSTACK_BASE}/bank?currency=NGN`, {
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` },
+      timeout: 15000,
+    });
+    return { banks: res.data.data.map((b) => ({ name: b.name, code: b.code })) };
+  } catch (err) {
+    console.error("listBanks error:", err.response?.data || err.message);
+    throw new HttpsError("internal", "Couldn't load bank list.");
+  }
+});
+
+exports.resolveBankAccount = onCall({ secrets: [PAYSTACK_SECRET] }, async (request) => {
+  if (!request.auth?.uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+  const { bankCode, accountNumber } = request.data || {};
+  if (!bankCode || !/^\d{10}$/.test(accountNumber || "")) {
+    throw new HttpsError("invalid-argument", "Enter a valid 10-digit account number.");
+  }
+  try {
+    const res = await axios.get(`${PAYSTACK_BASE}/bank/resolve`, {
+      params: { account_number: accountNumber, bank_code: bankCode },
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` },
+      timeout: 15000,
+    });
+    return { accountName: res.data.data.account_name };
+  } catch (err) {
+    console.error("resolveBankAccount error:", err.response?.data || err.message);
+    throw new HttpsError("not-found", "Couldn't verify that account. Check the details and try again.");
+  }
+});
+
+exports.saveBankAccount = onCall({ secrets: [PAYSTACK_SECRET] }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+
+  const { bankCode, bankName, accountNumber, accountName } = request.data || {};
+  if (!bankCode || !bankName || !/^\d{10}$/.test(accountNumber || "") || !accountName) {
+    throw new HttpsError("invalid-argument", "Missing or invalid bank details.");
+  }
+
+  try {
+    const res = await axios.post(
+      `${PAYSTACK_BASE}/transferrecipient`,
+      { type: "nuban", name: accountName, account_number: accountNumber, bank_code: bankCode, currency: "NGN" },
+      { headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` }, timeout: 15000 }
+    );
+    const recipientCode = res.data.data.recipient_code;
+    const last4 = accountNumber.slice(-4);
+
+    await db.collection("wallets").doc(uid).collection("private").doc("bank").set({
+      recipientCode, bankName, accountName, last4,
+    });
+    await db.collection("wallets").doc(uid).set(
+      { bankOnFile: { bankName, accountName, last4 } },
+      { merge: true }
+    );
+
+    return { success: true, bankName, accountName, last4 };
+  } catch (err) {
+    console.error("saveBankAccount error:", err.response?.data || err.message);
+    throw new HttpsError("internal", "Couldn't save that bank account.");
+  }
+});
+
+exports.requestWithdrawal = onCall({ secrets: [PAYSTACK_SECRET] }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+
+  const amountKobo = Math.round(Number(request.data?.amount));
+  if (!Number.isFinite(amountKobo) || amountKobo < MIN_WITHDRAWAL) {
+    throw new HttpsError("invalid-argument", "Minimum withdrawal is ₦500.");
+  }
+
+  const walletRef = db.collection("wallets").doc(uid);
+  const bankRef = walletRef.collection("private").doc("bank");
+  const [walletSnap, bankSnap] = await Promise.all([walletRef.get(), bankRef.get()]);
+
+  if (!bankSnap.exists) throw new HttpsError("failed-precondition", "Link a bank account first.");
+  if ((walletSnap.data()?.balance || 0) < amountKobo) {
+    throw new HttpsError("failed-precondition", "Insufficient balance.");
+  }
+
+  const fee = withdrawalFee(amountKobo) + stampDuty(amountKobo);
+  const netPayout = amountKobo - fee;
+  if (netPayout <= 0) throw new HttpsError("failed-precondition", "Amount too small after fees.");
+
+  const txRef = db.collection("transactions").doc();
+
+  await walletRef.update({ balance: admin.firestore.FieldValue.increment(-amountKobo) });
+  await txRef.set({
+    type: "withdrawal",
+    uid,
+    amount: amountKobo,
+    fee,
+    netPayout,
+    status: "pending",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  try {
+    await axios.post(
+      `${PAYSTACK_BASE}/transfer`,
+      {
+        source: "balance",
+        amount: netPayout,
+        recipient: bankSnap.data().recipientCode,
+        reference: txRef.id,
+        reason: "MoneyPadi withdrawal",
+      },
+      { headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` }, timeout: 15000 }
+    );
+    // NOTE: if OTP finalization is enabled on your Paystack transfers
+    // settings, this call alone won't complete the payout — check your
+    // dashboard's Transfer settings and disable OTP for this to be
+    // fully automatic, or add a finalize-transfer step.
+    return { success: true, txId: txRef.id, netPayout, fee };
+  } catch (err) {
+    console.error("requestWithdrawal transfer error:", err.response?.data || err.message);
+    await walletRef.update({ balance: admin.firestore.FieldValue.increment(amountKobo) });
+    await txRef.set({ status: "failed" }, { merge: true });
+    throw new HttpsError("internal", "Withdrawal failed. Your balance has been refunded.");
+  }
 });

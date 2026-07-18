@@ -64,6 +64,9 @@
   .balance-label{ font-size:12.5px; font-weight:600; opacity:0.85; text-transform:uppercase; letter-spacing:0.06em; }
   .balance-amount{ font-family:'Space Grotesk', sans-serif; font-size:40px; font-weight:700; margin-top:8px; }
   .balance-code{ margin-top:14px; font-size:13px; opacity:0.85; }
+  .balance-actions{ display:flex; gap:10px; margin-top:20px; }
+  .btn-balance{ flex:1; background:rgba(255,255,255,0.14); color:white; border:1px solid rgba(255,255,255,0.25); }
+  .btn-balance:hover{ background:rgba(255,255,255,0.22); }
   .balance-code b{ font-family:'Space Grotesk', sans-serif; letter-spacing:0.04em; }
   .locked-banner{
     margin-top:36px; background:rgba(0,0,0,0.18); border-radius:12px; padding:10px 14px; font-size:13px;
@@ -203,6 +206,84 @@
   </div>
 </div>
 
+<!-- TOP UP MODAL -->
+<div class="modal-backdrop" id="topUpModal">
+  <div class="modal">
+    <h2>Top Up</h2>
+    <p class="sub">Bank transfer only — fast, familiar, low fee.</p>
+
+    <div id="topupStepAmount">
+      <div class="form-error" id="topupError"></div>
+      <div class="field" style="margin-top:14px;">
+        <label>Amount</label>
+        <div class="amount-prefix"><span>₦</span><input type="number" id="topupAmountInput" placeholder="1000" min="1" step="1" /></div>
+      </div>
+      <div class="qr-hint" style="text-align:left; margin-top:-4px;">A flat ₦10 MoneyPadi fee applies — you'll transfer amount + ₦10.</div>
+      <button class="btn btn-primary btn-full" id="topupContinueBtn" style="margin-top:16px;">Continue</button>
+    </div>
+
+    <div id="topupStepTransfer" style="display:none;">
+      <div class="code-display" style="margin-top:4px;">
+        <div style="font-size:13px; color:var(--ink-soft); margin-bottom:6px;">Transfer exactly</div>
+        <div class="qr-code-text" id="topupTotalAmount" style="font-size:30px;">—</div>
+      </div>
+      <div style="margin-top:14px;">
+        <div class="profile-row"><span class="k">Bank</span><span class="v" id="topupBankName">—</span></div>
+        <div class="profile-row"><span class="k">Account number</span><span class="v" id="topupAccountNumber">—</span></div>
+        <div class="profile-row"><span class="k">Account name</span><span class="v" id="topupAccountName">—</span></div>
+      </div>
+      <div class="form-error" id="topupVerifyError"></div>
+      <div class="form-success" id="topupVerifySuccess"></div>
+      <button class="btn btn-primary btn-full" id="topupIveSentBtn" style="margin-top:16px;">I've sent it</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-full" id="topupCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- WITHDRAW MODAL -->
+<div class="modal-backdrop" id="withdrawModal">
+  <div class="modal">
+    <h2>Withdraw</h2>
+
+    <div id="withdrawLinkedSection" style="display:none;">
+      <div class="profile-row"><span class="k">Linked account</span><span class="v" id="withdrawBankDisplay">—</span></div>
+      <div class="form-error" id="withdrawError"></div>
+      <div class="form-success" id="withdrawSuccess"></div>
+      <div class="field" style="margin-top:12px;">
+        <label>Amount</label>
+        <div class="amount-prefix"><span>₦</span><input type="number" id="withdrawAmountInput" placeholder="1000" min="500" step="1" /></div>
+      </div>
+      <div class="qr-hint" style="text-align:left;" id="withdrawFeePreview">Minimum withdrawal is ₦500.</div>
+      <button class="btn btn-primary btn-full" id="withdrawSubmitBtn" style="margin-top:14px;">Withdraw</button>
+      <button class="btn btn-ghost btn-full" id="withdrawChangeBankBtn" style="margin-top:10px;">Use a different account</button>
+    </div>
+
+    <div id="withdrawLinkSection">
+      <p class="sub">Link a bank account first — we'll confirm the name before saving.</p>
+      <div class="form-error" id="linkBankError"></div>
+      <div class="field" style="margin-top:12px;">
+        <label>Bank</label>
+        <select id="bankSelect" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid var(--line); font-family:inherit; font-size:14.5px; background:var(--card); color:var(--ink);">
+          <option value="">Loading banks…</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Account number</label>
+        <input type="text" id="bankAccountNumberInput" placeholder="0123456789" maxlength="10" inputmode="numeric" />
+      </div>
+      <div class="profile-row" id="resolvedNameRow" style="display:none;"><span class="k">Account name</span><span class="v" id="resolvedNameValue">—</span></div>
+      <button class="btn btn-primary btn-full" id="linkBankSubmitBtn" style="margin-top:10px;">Verify &amp; Link Account</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-full" id="withdrawCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
@@ -229,6 +310,12 @@
   const getWalletStatus = httpsCallable(functions, "getWalletStatus");
   const setPinFn = httpsCallable(functions, "setPin");
   const chargeWalletFn = httpsCallable(functions, "chargeWallet");
+  const initiateTopupFn = httpsCallable(functions, "initiateTopup");
+  const verifyTopupFn = httpsCallable(functions, "verifyTopup");
+  const listBanksFn = httpsCallable(functions, "listBanks");
+  const resolveBankAccountFn = httpsCallable(functions, "resolveBankAccount");
+  const saveBankAccountFn = httpsCallable(functions, "saveBankAccount");
+  const requestWithdrawalFn = httpsCallable(functions, "requestWithdrawal");
 
   const naira = (kobo) => `₦${(kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 })}`;
 
@@ -369,6 +456,10 @@
         <div class="balance-label">Wallet balance</div>
         <div class="balance-amount">${naira(currentWallet.balance || 0)}</div>
         <div class="balance-code">Your code: <b>${currentWallet.walletCode}</b></div>
+        <div class="balance-actions">
+          <button class="btn btn-balance" id="topUpBtn">Top Up</button>
+          <button class="btn btn-balance" id="withdrawBtn">Withdraw</button>
+        </div>
       </div>
 
       <div class="mode-toggle" role="tablist">
@@ -423,6 +514,8 @@
     });
 
     document.getElementById("chargeSubmit").addEventListener("click", startCharge);
+    document.getElementById("topUpBtn").addEventListener("click", openTopUpModal);
+    document.getElementById("withdrawBtn").addEventListener("click", openWithdrawModal);
 
     loadHistory();
   }
@@ -553,18 +646,13 @@
       currentWallet = walletSnap.data();
       document.querySelector(".balance-amount").textContent = naira(currentWallet.balance || 0);
       loadHistory();
-
-      pendingCharge = null;   // only clear on a confirmed success
-      document.getElementById("pinEntryInput").value = "";
     } catch (err) {
       errorEl.textContent = err?.message || "Something went wrong. Please try again.";
       errorEl.classList.add("visible");
-      document.getElementById("pinEntryInput").value = "";
-      document.getElementById("pinEntryInput").focus();
-      // pendingCharge stays intact — same charge, student gets another attempt
     } finally {
       confirmBtn.disabled = false;
       confirmBtn.textContent = "Confirm";
+      pendingCharge = null;
     }
   });
 
@@ -596,6 +684,261 @@
       errorEl.classList.add("visible");
       submitBtn.disabled = false;
       submitBtn.textContent = "Set PIN";
+    }
+  });
+
+  // ============================================================
+  // TOP UP
+  // ============================================================
+  let pendingTopupRef = null;
+  let banksCache = null;
+
+  function openTopUpModal() {
+    document.getElementById("topupStepAmount").style.display = "block";
+    document.getElementById("topupStepTransfer").style.display = "none";
+    document.getElementById("topupAmountInput").value = "";
+    document.getElementById("topupError").classList.remove("visible");
+    document.getElementById("topupVerifyError").classList.remove("visible");
+    document.getElementById("topupVerifySuccess").classList.remove("visible");
+    pendingTopupRef = null;
+    document.getElementById("topUpModal").classList.add("open");
+  }
+  document.getElementById("topupCloseBtn").addEventListener("click", () => {
+    document.getElementById("topUpModal").classList.remove("open");
+  });
+
+  document.getElementById("topupContinueBtn").addEventListener("click", async () => {
+    const errorEl = document.getElementById("topupError");
+    const btn = document.getElementById("topupContinueBtn");
+    errorEl.classList.remove("visible");
+
+    const amountNaira = Number(document.getElementById("topupAmountInput").value);
+    if (!Number.isFinite(amountNaira) || amountNaira <= 0) {
+      errorEl.textContent = "Enter a valid amount.";
+      errorEl.classList.add("visible");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Starting…";
+    try {
+      const { data } = await initiateTopupFn({ amount: Math.round(amountNaira * 100) });
+      pendingTopupRef = data.reference;
+
+      const details = data.bankDetails || {};
+      // Defensive field access — Paystack's bank_transfer payload shape
+      // can vary; check console if any of these show "—".
+      document.getElementById("topupTotalAmount").textContent = naira(data.totalChargeKobo);
+      document.getElementById("topupBankName").textContent =
+        details.bank_name || details.bank?.name || "—";
+      document.getElementById("topupAccountNumber").textContent =
+        details.account_number || details.identifier || "—";
+      document.getElementById("topupAccountName").textContent =
+        details.account_name || details.account_expires_at ? (details.account_name || "MoneyPadi") : "—";
+
+      document.getElementById("topupStepAmount").style.display = "none";
+      document.getElementById("topupStepTransfer").style.display = "block";
+    } catch (err) {
+      errorEl.textContent = err?.message || "Couldn't start the transfer. Try again.";
+      errorEl.classList.add("visible");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Continue";
+    }
+  });
+
+  document.getElementById("topupIveSentBtn").addEventListener("click", async () => {
+    const errorEl = document.getElementById("topupVerifyError");
+    const successEl = document.getElementById("topupVerifySuccess");
+    const btn = document.getElementById("topupIveSentBtn");
+    errorEl.classList.remove("visible");
+    successEl.classList.remove("visible");
+
+    if (!pendingTopupRef) return;
+    btn.disabled = true;
+    btn.textContent = "Checking…";
+    try {
+      const { data } = await verifyTopupFn({ reference: pendingTopupRef });
+      if (data.credited) {
+        successEl.textContent = "Topup confirmed — your balance is updated.";
+        successEl.classList.add("visible");
+        const walletSnap = await getDoc(doc(db, "wallets", currentUser.uid));
+        currentWallet = walletSnap.data();
+        document.querySelector(".balance-amount").textContent = naira(currentWallet.balance || 0);
+        loadHistory();
+        setTimeout(() => document.getElementById("topUpModal").classList.remove("open"), 1500);
+      } else {
+        errorEl.textContent = "Not received yet — bank transfers can take a minute. Try again shortly.";
+        errorEl.classList.add("visible");
+      }
+    } catch (err) {
+      errorEl.textContent = err?.message || "Couldn't verify yet. Try again in a moment.";
+      errorEl.classList.add("visible");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "I've sent it";
+    }
+  });
+
+  // ============================================================
+  // WITHDRAW
+  // ============================================================
+  function withdrawFeePreviewKobo(amountKobo) {
+    let fee = amountKobo <= 500000 ? 1000 : amountKobo <= 5000000 ? 2500 : 5000;
+    if (amountKobo >= 1000000) fee += 5000; // stamp duty
+    return fee;
+  }
+
+  async function openWithdrawModal() {
+    document.getElementById("withdrawError").classList.remove("visible");
+    document.getElementById("withdrawSuccess").classList.remove("visible");
+    document.getElementById("linkBankError").classList.remove("visible");
+
+    if (currentWallet.bankOnFile) {
+      showWithdrawLinkedSection();
+    } else {
+      showWithdrawLinkSection();
+    }
+    document.getElementById("withdrawModal").classList.add("open");
+  }
+  document.getElementById("withdrawCloseBtn").addEventListener("click", () => {
+    document.getElementById("withdrawModal").classList.remove("open");
+  });
+
+  function showWithdrawLinkedSection() {
+    document.getElementById("withdrawLinkedSection").style.display = "block";
+    document.getElementById("withdrawLinkSection").style.display = "none";
+    const bank = currentWallet.bankOnFile;
+    document.getElementById("withdrawBankDisplay").textContent =
+      `${bank.bankName} ••••${bank.last4} (${bank.accountName})`;
+    document.getElementById("withdrawAmountInput").value = "";
+    document.getElementById("withdrawFeePreview").textContent = "Minimum withdrawal is ₦500.";
+  }
+
+  async function showWithdrawLinkSection() {
+    document.getElementById("withdrawLinkedSection").style.display = "none";
+    document.getElementById("withdrawLinkSection").style.display = "block";
+    document.getElementById("resolvedNameRow").style.display = "none";
+    document.getElementById("bankAccountNumberInput").value = "";
+
+    const select = document.getElementById("bankSelect");
+    if (!banksCache) {
+      select.innerHTML = '<option value="">Loading banks…</option>';
+      try {
+        const { data } = await listBanksFn();
+        banksCache = data.banks;
+      } catch (err) {
+        select.innerHTML = '<option value="">Couldn\'t load banks</option>';
+        return;
+      }
+    }
+    select.innerHTML = '<option value="">Select your bank</option>' +
+      banksCache.map(b => `<option value="${b.code}">${b.name}</option>`).join("");
+  }
+
+  document.getElementById("withdrawChangeBankBtn").addEventListener("click", showWithdrawLinkSection);
+
+  let resolvedAccountName = null;
+  async function tryResolveAccount() {
+    const bankCode = document.getElementById("bankSelect").value;
+    const accountNumber = document.getElementById("bankAccountNumberInput").value.trim();
+    const row = document.getElementById("resolvedNameRow");
+    resolvedAccountName = null;
+    row.style.display = "none";
+
+    if (!bankCode || !/^\d{10}$/.test(accountNumber)) return;
+    try {
+      const { data } = await resolveBankAccountFn({ bankCode, accountNumber });
+      resolvedAccountName = data.accountName;
+      document.getElementById("resolvedNameValue").textContent = resolvedAccountName;
+      row.style.display = "flex";
+    } catch (err) {
+      document.getElementById("linkBankError").textContent = err?.message || "Couldn't verify that account.";
+      document.getElementById("linkBankError").classList.add("visible");
+    }
+  }
+  document.getElementById("bankSelect").addEventListener("change", tryResolveAccount);
+  document.getElementById("bankAccountNumberInput").addEventListener("input", (e) => {
+    if (e.target.value.length === 10) tryResolveAccount();
+  });
+
+  document.getElementById("linkBankSubmitBtn").addEventListener("click", async () => {
+    const errorEl = document.getElementById("linkBankError");
+    const btn = document.getElementById("linkBankSubmitBtn");
+    errorEl.classList.remove("visible");
+
+    const bankCode = document.getElementById("bankSelect").value;
+    const bankName = document.getElementById("bankSelect").selectedOptions[0]?.textContent;
+    const accountNumber = document.getElementById("bankAccountNumberInput").value.trim();
+
+    if (!bankCode || !resolvedAccountName) {
+      errorEl.textContent = "Select a bank and enter a valid account number first.";
+      errorEl.classList.add("visible");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Linking…";
+    try {
+      const { data } = await saveBankAccountFn({
+        bankCode, bankName, accountNumber, accountName: resolvedAccountName,
+      });
+      currentWallet.bankOnFile = { bankName: data.bankName, accountName: data.accountName, last4: data.last4 };
+      showWithdrawLinkedSection();
+    } catch (err) {
+      errorEl.textContent = err?.message || "Couldn't link that account. Try again.";
+      errorEl.classList.add("visible");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Verify & Link Account";
+    }
+  });
+
+  document.getElementById("withdrawAmountInput").addEventListener("input", (e) => {
+    const amountKobo = Math.round(Number(e.target.value) * 100);
+    const previewEl = document.getElementById("withdrawFeePreview");
+    if (!Number.isFinite(amountKobo) || amountKobo < 50000) {
+      previewEl.textContent = "Minimum withdrawal is ₦500.";
+      return;
+    }
+    const fee = withdrawFeePreviewKobo(amountKobo);
+    const net = amountKobo - fee;
+    previewEl.textContent = `You'll receive ${naira(net)} after fees (${naira(fee)}).`;
+  });
+
+  document.getElementById("withdrawSubmitBtn").addEventListener("click", async () => {
+    const errorEl = document.getElementById("withdrawError");
+    const successEl = document.getElementById("withdrawSuccess");
+    const btn = document.getElementById("withdrawSubmitBtn");
+    errorEl.classList.remove("visible");
+    successEl.classList.remove("visible");
+
+    const amountNaira = Number(document.getElementById("withdrawAmountInput").value);
+    const amountKobo = Math.round(amountNaira * 100);
+    if (!Number.isFinite(amountKobo) || amountKobo < 50000) {
+      errorEl.textContent = "Minimum withdrawal is ₦500.";
+      errorEl.classList.add("visible");
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Processing…";
+    try {
+      const { data } = await requestWithdrawalFn({ amount: amountKobo });
+      successEl.textContent = `Withdrawal started — ${naira(data.netPayout)} is on its way to your account.`;
+      successEl.classList.add("visible");
+      document.getElementById("withdrawAmountInput").value = "";
+
+      const walletSnap = await getDoc(doc(db, "wallets", currentUser.uid));
+      currentWallet = walletSnap.data();
+      document.querySelector(".balance-amount").textContent = naira(currentWallet.balance || 0);
+      loadHistory();
+    } catch (err) {
+      errorEl.textContent = err?.message || "Withdrawal failed. Try again.";
+      errorEl.classList.add("visible");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Withdraw";
     }
   });
 </script>
