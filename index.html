@@ -9,6 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
 <style>
   :root{
     --ink:#0F1115;
@@ -64,13 +68,9 @@
     font-weight:700; font-size:19px;
   }
   .logo-mark{
-    width:30px; height:30px; border-radius:9px;
-    background:linear-gradient(155deg, var(--green) 0%, var(--green-deep) 100%);
-    display:flex; align-items:center; justify-content:center;
-    color:white; font-size:15px; font-weight:700;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+    width:30px; height:30px;
     flex-shrink:0;
-  }
+}
   .nav-links{
     display:flex; align-items:center; gap:32px;
     font-size:14.5px; font-weight:500; color:var(--ink-soft);
@@ -493,18 +493,11 @@ footer {
   color: var(--green);
 }
 .favicon-placeholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 16px;
   height: 16px;
-  border-radius: 3px;
-  background: var(--green);
-  color: white;
-  font-size: 9px;
-  font-weight: 700;
   margin-right: 6px;
   vertical-align: middle;
+  display: inline-block;
 }
 
 @media (max-width: 760px) {
@@ -658,7 +651,7 @@ footer {
 <header>
   <nav class="wrap">
     <div class="logo">
-      <div class="logo-mark">M</div>
+      <img src="favicon.svg" alt="MoneyPadi" class="logo-mark" />
       MoneyPadi
     </div>
     <div class="nav-links">
@@ -925,7 +918,7 @@ footer {
       <div class="footer-brand">
         <div class="logo">
           <!-- Favicon Placeholder Container -->
-          <div class="favicon-placeholder" title="Favicon Placeholder">M</div>
+          <img src="favicon.svg" alt="MoneyPadi" class="favicon-placeholder" title="MoneyPadi" />
           MoneyPadi
         </div>
         <p class="footer-slogan">The POS terminal in your pocket.</p>

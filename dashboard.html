@@ -8,6 +8,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
 <style>
   :root{
     --ink:#0F1115; --ink-soft:#3A3F47;
@@ -30,7 +34,10 @@
   nav{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px; max-width:720px; margin:0 auto; }
   @media (min-width: 900px){ nav{max-width:1040px;} }
   .logo{ display:flex; align-items:center; gap:9px; font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:18px; }
-  .logo-mark{ width:28px; height:28px; border-radius:8px; background:linear-gradient(155deg, var(--green) 0%, var(--green-deep) 100%); display:flex; align-items:center; justify-content:center; color:white; font-size:14px; font-weight:700; flex-shrink:0; }
+  .logo-mark{
+    width:30px; height:30px;
+    flex-shrink:0;
+}
 
   .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 18px; border-radius:100px; font-weight:600; font-size:14px; border:1px solid transparent; cursor:pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease; }
   .btn-primary{ background:var(--ink); color:white; }
@@ -142,7 +149,7 @@
 
 <header>
   <nav>
-    <div class="logo"><div class="logo-mark">M</div>MoneyPadi</div>
+    <div class="logo"><img src="favicon.svg" alt="MoneyPadi" class="logo-mark" />MoneyPadi</div>
     <button class="avatar-btn" id="avatarBtn" aria-label="Open profile"><span class="dot"></span>Profile</button>
   </nav>
 </header>
@@ -230,6 +237,11 @@
         <input type="password" id="forgotPinPasswordInput" autocomplete="current-password" />
       </div>
       <button class="btn btn-primary btn-full" id="forgotPinVerifyBtn" style="margin-top:8px;">Verify</button>
+    </div>
+
+    <div id="forgotPinStepGoogle" style="display:none;">
+      <div class="form-error" id="forgotPinGoogleError"></div>
+      <button class="btn btn-primary btn-full" id="forgotPinGoogleBtn" style="margin-top:8px;">Continue with Google</button>
     </div>
 
     <div id="forgotPinStepNewPin" style="display:none;">
@@ -327,7 +339,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import { getAuth, onAuthStateChanged, signOut, EmailAuthProvider, reauthenticateWithCredential, GoogleAuthProvider, reauthenticateWithPopup } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
   import {
     getFirestore, doc, getDoc, updateDoc,
     collection, query, where, orderBy, limit, getDocs
@@ -481,10 +493,23 @@
   // verification instead, via Firebase Auth's own reauth flow.
   // ----------
   document.getElementById("forgotPinLink").addEventListener("click", () => {
-    document.getElementById("forgotPinStepPassword").style.display = "block";
+    const isGoogleUser = currentUser.providerData.some(p => p.providerId === "google.com");
+
     document.getElementById("forgotPinStepNewPin").style.display = "none";
     document.getElementById("forgotPinPasswordInput").value = "";
     document.getElementById("forgotPinPasswordError").classList.remove("visible");
+    document.getElementById("forgotPinGoogleError").classList.remove("visible");
+
+    if (isGoogleUser) {
+      document.getElementById("forgotPinSub").textContent = "Confirm it's you with Google, then choose a new PIN.";
+      document.getElementById("forgotPinStepPassword").style.display = "none";
+      document.getElementById("forgotPinStepGoogle").style.display = "block";
+    } else {
+      document.getElementById("forgotPinSub").textContent = "Enter your account password to confirm it's you, then choose a new PIN.";
+      document.getElementById("forgotPinStepPassword").style.display = "block";
+      document.getElementById("forgotPinStepGoogle").style.display = "none";
+    }
+
     document.getElementById("profileModal").classList.remove("open");
     document.getElementById("forgotPinModal").classList.add("open");
   });
@@ -521,6 +546,31 @@
     } finally {
       btn.disabled = false;
       btn.textContent = "Verify";
+    }
+  });
+
+  document.getElementById("forgotPinGoogleBtn").addEventListener("click", async () => {
+    const errorEl = document.getElementById("forgotPinGoogleError");
+    const btn = document.getElementById("forgotPinGoogleBtn");
+    errorEl.classList.remove("visible");
+
+    btn.disabled = true;
+    btn.textContent = "Opening Google…";
+    try {
+      await reauthenticateWithPopup(currentUser, new GoogleAuthProvider());
+      document.getElementById("forgotPinStepGoogle").style.display = "none";
+      document.getElementById("forgotPinStepNewPin").style.display = "block";
+      document.getElementById("forgotPinNewPinInput").value = "";
+      document.getElementById("forgotPinNewPinConfirmInput").value = "";
+      document.getElementById("forgotPinNewPinError").classList.remove("visible");
+    } catch (err) {
+      // Includes the user closing the Google popup without finishing —
+      // not just a real failure, so keep the message neutral.
+      errorEl.textContent = "Couldn't confirm with Google. Try again.";
+      errorEl.classList.add("visible");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Continue with Google";
     }
   });
 

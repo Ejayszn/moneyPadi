@@ -9,6 +9,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
 <style>
   :root{
     --ink:#0F1115;
@@ -60,13 +64,9 @@
     font-weight:700; font-size:19px;
   }
   .logo-mark{
-    width:30px; height:30px; border-radius:9px;
-    background:linear-gradient(155deg, var(--green) 0%, var(--green-deep) 100%);
-    display:flex; align-items:center; justify-content:center;
-    color:white; font-size:15px; font-weight:700;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+    width:30px; height:30px;
     flex-shrink:0;
-  }
+}
 
   /* ---------- AUTH FORM (now the whole page, at every width) ---------- */
   .form-panel{
@@ -206,7 +206,7 @@
       <a href="index.html" class="back-home">← Back to home</a>
 
       <div class="logo">
-        <div class="logo-mark">M</div>
+        <img src="favicon.svg" alt="MoneyPadi" class="logo-mark" />
         MoneyPadi
       </div>
 
@@ -296,12 +296,17 @@
     createUserWithEmailAndPassword,
     signInWithPopup,
     GoogleAuthProvider,
+    EmailAuthProvider,
+    linkWithCredential,
+    getAdditionalUserInfo,
     sendPasswordResetEmail,
-    updateProfile
+    updateProfile,
+    signOut
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
   import {
   getFirestore,
   doc,
+  getDoc,
   setDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
@@ -443,33 +448,127 @@ document.querySelectorAll('.pw-toggle').forEach(btn => {
 
   // Immutable consent record — separate from the wallet doc,
   // which the Cloud Function owns per architecture doc section 6.
-  await setDoc(doc(db, "consent", cred.user.uid), {
-    uid: cred.user.uid,
-    agreedToTerms: true,
-    agreedToTermsAt: serverTimestamp(),
-    termsVersion: "1.0" // bump this string whenever your ToS/Privacy Policy changes
-  });
+  await ensureConsentRecorded(cred.user.uid);
 
   window.location.replace("dashboard.html?setup=pin");
 } catch (err) {
-  showError(friendlyAuthError(err));
-  submitBtn.disabled = false;
-  submitBtn.textContent = "Create your wallet";
+  if (err.code === "auth/email-already-in-use") {
+    await linkPasswordToExistingGoogleAccount(email, password, name);
+  } else {
+    showError(friendlyAuthError(err));
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Create your wallet";
+  }
 }
   });
 
-  // ---------- Google sign-in (both buttons do the same thing) ----------
-  async function handleGoogleAuth() {
-    clearError();
+  // A Google account already exists for this email. Prove it's them
+  // by having them sign in with Google right now, then attach a
+  // password to that SAME account instead of failing outright.
+  async function linkPasswordToExistingGoogleAccount(email, password, name) {
+    showError("A wallet already exists for that email via Google. Sign in with Google to add a password to it.");
     try {
-      await signInWithPopup(auth, googleProvider);
+      const cred = await signInWithPopup(auth, googleProvider);
+      await linkWithCredential(cred.user, EmailAuthProvider.credential(email, password));
+      if (name && !cred.user.displayName) {
+        await updateProfile(cred.user, { displayName: name });
+      }
+      // Consent doc may already exist if this Google account was
+      // created after the fix above — only write if it's missing.
+      await ensureConsentRecorded(cred.user.uid);
       window.location.replace("dashboard.html");
-    } catch (err) {
-      showError(friendlyAuthError(err));
+    } catch (linkErr) {
+      showError(friendlyAuthError(linkErr));
     }
   }
-  document.getElementById("googleLogin").addEventListener("click", handleGoogleAuth);
-  document.getElementById("googleSignup").addEventListener("click", handleGoogleAuth);
+
+  // Writes the immutable consent record for this uid — but only if
+  // one doesn't already exist. Needed because a single account can
+  // reach this point from more than one path (Google signup, or
+  // linking a password onto a Google account later), and Firestore
+  // rules correctly forbid ever updating an existing consent doc.
+  async function ensureConsentRecorded(uid) {
+    const consentRef = doc(db, "consent", uid);
+    const existing = await getDoc(consentRef);
+    if (existing.exists()) return;
+    await setDoc(consentRef, {
+      uid,
+      agreedToTerms: true,
+      agreedToTermsAt: serverTimestamp(),
+      termsVersion: "1.0"
+    });
+  }
+
+  // ---------- Google sign-in (both buttons call this) ----------
+  // fromSignupTab: true when clicked from the Sign Up panel — in
+  // that case the terms checkbox must already be checked, same rule
+  // as the password signup path.
+  async function handleGoogleAuth(fromSignupTab) {
+    clearError();
+    if (fromSignupTab && !document.getElementById("signupAgreeTerms").checked) {
+      showError("You need to agree to the Terms of Service and Privacy Policy to continue.");
+      return;
+    }
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const isNewAccount = getAdditionalUserInfo(result)?.isNewUser;
+
+      if (isNewAccount) {
+        // Someone can technically hit "new account" via the Log In
+        // tab's Google button too (no checkbox visible there) — in
+        // that case, ask explicitly before recording consent.
+        if (!fromSignupTab) {
+          const agreed = window.confirm(
+            "By continuing you agree to MoneyPadi's Terms of Service and Privacy Policy. Continue?"
+          );
+          if (!agreed) {
+            await signOut(auth);
+            showError("You need to agree to the Terms of Service and Privacy Policy to continue.");
+            return;
+          }
+        }
+        await ensureConsentRecorded(result.user.uid);
+        window.location.replace("dashboard.html?setup=pin");
+        return;
+      }
+
+      window.location.replace("dashboard.html");
+    } catch (err) {
+      if (err.code === "auth/account-exists-with-different-credential") {
+        await linkGoogleToExistingPasswordAccount(err);
+      } else {
+        showError(friendlyAuthError(err));
+      }
+    }
+  }
+
+  // A password account already exists for this email. Firebase hands
+  // back the pending Google credential on the error itself — we sign
+  // in with the password first (proves it's really them), then attach
+  // Google as a second sign-in method on that SAME account. One
+  // wallet either way, going forward.
+  async function linkGoogleToExistingPasswordAccount(err) {
+    const pendingCred = GoogleAuthProvider.credentialFromError(err);
+    const email = err.customData?.email;
+    if (!pendingCred || !email) {
+      showError("Something went wrong. Please try again.");
+      return;
+    }
+    const password = window.prompt(
+      `A wallet already exists for ${email} with a password. Enter that password to link your Google account to it.`
+    );
+    if (!password) return;
+    try {
+      const userCred = await signInWithEmailAndPassword(auth, email, password);
+      await linkWithCredential(userCred.user, pendingCred);
+      window.location.replace("dashboard.html");
+    } catch (linkErr) {
+      showError(friendlyAuthError(linkErr));
+    }
+  }
+  document.getElementById("googleLogin").addEventListener("click", () => handleGoogleAuth(false));
+  document.getElementById("googleSignup").addEventListener("click", () => handleGoogleAuth(true));
 
   // ---------- Forgot password ----------
   document.getElementById("forgotLink").addEventListener("click", async (e) => {
