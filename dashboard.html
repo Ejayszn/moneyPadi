@@ -105,7 +105,7 @@
   /* Receive panel: charge form */
   .field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px;}
   .field label{font-size:13px; font-weight:600; color:var(--ink-soft);}
-  .field input{ padding:12px 14px; border-radius:11px; border:1px solid var(--line); background:var(--card); font-size:14.5px; font-family:inherit; color:var(--ink); outline-offset:2px; }
+  .field input{ width:100%; padding:12px 14px; border-radius:11px; border:1px solid var(--line); background:var(--card); font-size:14.5px; font-family:inherit; color:var(--ink); outline-offset:2px; }
   .field input:focus-visible{ outline:2px solid var(--green); border-color:var(--green); }
   .amount-prefix{ position:relative; }
   .amount-prefix span{ position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--ink-soft); font-size:14.5px; }
@@ -139,6 +139,33 @@
     font-size:22px; text-align:center; letter-spacing:0.4em; font-family:'Space Grotesk', sans-serif;
   }
   .pin-input:focus-visible{ outline:2px solid var(--green); border-color:var(--green); }
+
+  /* Custom bank dropdown — replaces the native <select> so it can
+     actually be themed, plus gets a search box since the bank list
+     is long. */
+  .bank-select-trigger{
+    width:100%; padding:12px 14px; border-radius:11px; border:1px solid var(--line);
+    background:var(--card); font-family:inherit; font-size:14.5px; color:var(--ink);
+    display:flex; align-items:center; justify-content:space-between; cursor:pointer; text-align:left;
+  }
+  .bank-select-trigger:hover{ background:var(--surface-dim); }
+  .bank-select-trigger .placeholder{ color:var(--ink-soft); }
+  .bank-select-chevron{ flex-shrink:0; color:var(--ink-soft); transition:transform 0.15s ease; margin-left:8px; }
+  .bank-select-trigger[aria-expanded="true"] .bank-select-chevron{ transform:rotate(180deg); }
+  .bank-select-panel{
+    display:none; position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:50;
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    box-shadow:var(--shadow-pop); overflow:hidden;
+  }
+  .bank-select-panel.open{ display:block; }
+  .bank-select-search{
+    width:100%; padding:12px 14px; border:none; border-bottom:1px solid var(--line);
+    font-family:inherit; font-size:14px; outline:none; background:var(--card); color:var(--ink);
+  }
+  .bank-select-list{ max-height:220px; overflow-y:auto; }
+  .bank-select-option{ padding:11px 14px; font-size:14px; cursor:pointer; color:var(--ink); }
+  .bank-select-option:hover{ background:var(--surface-dim); }
+  .bank-select-empty{ padding:14px; font-size:13.5px; color:var(--ink-soft); text-align:center; }
   .modal-actions{ display:flex; gap:10px; margin-top:20px; }
   .modal-actions .btn{flex:1;}
 
@@ -263,7 +290,7 @@
 <div class="modal-backdrop" id="topUpModal">
   <div class="modal">
     <h2>Top Up</h2>
-    <p class="sub">Bank transfer only — fast, familiar, low fee.</p>
+    <p class="sub">Bank transfer only. Fast, familiar, low fee.</p>
 
     <div id="topupStepAmount">
       <div class="form-error" id="topupError"></div>
@@ -271,7 +298,7 @@
         <label>Amount</label>
         <div class="amount-prefix"><span>₦</span><input type="number" id="topupAmountInput" placeholder="1000" min="1" step="1" /></div>
       </div>
-      <div class="qr-hint" style="text-align:left; margin-top:-4px;">A flat ₦10 MoneyPadi fee applies — you'll transfer amount + ₦10.</div>
+      <div class="qr-hint" style="text-align:left; margin-top:-4px;">A flat ₦10 MoneyPadi fee applies.</div>
       <button class="btn btn-primary btn-full" id="topupContinueBtn" style="margin-top:16px;">Continue</button>
     </div>
 
@@ -315,13 +342,18 @@
     </div>
 
     <div id="withdrawLinkSection">
-      <p class="sub">Link a bank account first — we'll confirm the name before saving.</p>
+      <p class="sub">Link a bank account first, we'll confirm the name before saving.</p>
       <div class="form-error" id="linkBankError"></div>
-      <div class="field" style="margin-top:12px;">
+      <div class="field" style="margin-top:12px; position:relative;">
         <label>Bank</label>
-        <select id="bankSelect" style="width:100%; padding:12px 14px; border-radius:11px; border:1px solid var(--line); font-family:inherit; font-size:14.5px; background:var(--card); color:var(--ink);">
-          <option value="">Loading banks…</option>
-        </select>
+        <button type="button" class="bank-select-trigger" id="bankSelectTrigger" aria-expanded="false">
+          <span id="bankSelectLabel" class="placeholder">Loading banks…</span>
+          <svg class="bank-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="bank-select-panel" id="bankSelectPanel">
+          <input type="text" class="bank-select-search" id="bankSelectSearch" placeholder="Search banks…" autocomplete="off" />
+          <div class="bank-select-list" id="bankSelectList"></div>
+        </div>
       </div>
       <div class="field">
         <label>Account number</label>
@@ -690,7 +722,7 @@
           <div class="code-display">
             <div class="qr-code-text">${currentWallet.walletCode}</div>
           </div>
-          <div class="qr-hint">Works even without your own network — the vendor's connection carries it.</div>
+          <div class="qr-hint">Works even without your own network, the vendor's connection carries it.</div>
         </div>
         <div class="card">
           <h3>Recent charges</h3>
@@ -983,7 +1015,7 @@
     try {
       const { data } = await verifyTopupFn({ reference: pendingTopupRef });
       if (data.credited) {
-        successEl.textContent = "Topup confirmed — your balance is updated.";
+        successEl.textContent = "Topup confirmed. Your balance is updated.";
         successEl.classList.add("visible");
         const walletSnap = await getDoc(doc(db, "wallets", currentUser.uid));
         currentWallet = walletSnap.data();
@@ -1044,26 +1076,81 @@
     document.getElementById("resolvedNameRow").style.display = "none";
     document.getElementById("bankAccountNumberInput").value = "";
 
-    const select = document.getElementById("bankSelect");
+    selectedBank = null;
+    const label = document.getElementById("bankSelectLabel");
+    label.textContent = "Loading banks…";
+    label.classList.add("placeholder");
+
     if (!banksCache) {
-      select.innerHTML = '<option value="">Loading banks…</option>';
       try {
         const { data } = await listBanksFn();
         banksCache = data.banks;
       } catch (err) {
-        select.innerHTML = '<option value="">Couldn\'t load banks</option>';
+        label.textContent = "Couldn't load banks";
         return;
       }
     }
-    select.innerHTML = '<option value="">Select your bank</option>' +
-      banksCache.map(b => `<option value="${b.code}">${b.name}</option>`).join("");
+    label.textContent = "Select your bank";
+    renderBankOptions(banksCache);
   }
+
+  function renderBankOptions(banks) {
+    const list = document.getElementById("bankSelectList");
+    if (!banks.length) {
+      list.innerHTML = '<div class="bank-select-empty">No banks match that search.</div>';
+      return;
+    }
+    list.innerHTML = banks.map(b =>
+      `<div class="bank-select-option" data-code="${b.code}" data-name="${b.name.replace(/"/g, "&quot;")}">${b.name}</div>`
+    ).join("");
+  }
+
+  document.getElementById("bankSelectTrigger").addEventListener("click", () => {
+    const panel = document.getElementById("bankSelectPanel");
+    const trigger = document.getElementById("bankSelectTrigger");
+    const nowOpen = panel.classList.toggle("open");
+    trigger.setAttribute("aria-expanded", nowOpen ? "true" : "false");
+    if (nowOpen) {
+      const search = document.getElementById("bankSelectSearch");
+      search.value = "";
+      renderBankOptions(banksCache || []);
+      search.focus();
+    }
+  });
+
+  document.getElementById("bankSelectSearch").addEventListener("input", (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    renderBankOptions((banksCache || []).filter(b => b.name.toLowerCase().includes(q)));
+  });
+
+  document.getElementById("bankSelectList").addEventListener("click", (e) => {
+    const option = e.target.closest(".bank-select-option");
+    if (!option) return;
+    selectedBank = { code: option.dataset.code, name: option.dataset.name };
+    const label = document.getElementById("bankSelectLabel");
+    label.textContent = selectedBank.name;
+    label.classList.remove("placeholder");
+    document.getElementById("bankSelectPanel").classList.remove("open");
+    document.getElementById("bankSelectTrigger").setAttribute("aria-expanded", "false");
+    tryResolveAccount();
+  });
+
+  // Close the panel when clicking anywhere outside it
+  document.addEventListener("click", (e) => {
+    const panel = document.getElementById("bankSelectPanel");
+    const trigger = document.getElementById("bankSelectTrigger");
+    if (panel.classList.contains("open") && !panel.contains(e.target) && !trigger.contains(e.target)) {
+      panel.classList.remove("open");
+      trigger.setAttribute("aria-expanded", "false");
+    }
+  });
 
   document.getElementById("withdrawChangeBankBtn").addEventListener("click", showWithdrawLinkSection);
 
   let resolvedAccountName = null;
+  let selectedBank = null; // { code, name } — replaces the native <select>'s value
   async function tryResolveAccount() {
-    const bankCode = document.getElementById("bankSelect").value;
+    const bankCode = selectedBank?.code;
     const accountNumber = document.getElementById("bankAccountNumberInput").value.trim();
     const row = document.getElementById("resolvedNameRow");
     resolvedAccountName = null;
@@ -1080,7 +1167,6 @@
       document.getElementById("linkBankError").classList.add("visible");
     }
   }
-  document.getElementById("bankSelect").addEventListener("change", tryResolveAccount);
   document.getElementById("bankAccountNumberInput").addEventListener("input", (e) => {
     if (e.target.value.length === 10) tryResolveAccount();
   });
@@ -1090,8 +1176,8 @@
     const btn = document.getElementById("linkBankSubmitBtn");
     errorEl.classList.remove("visible");
 
-    const bankCode = document.getElementById("bankSelect").value;
-    const bankName = document.getElementById("bankSelect").selectedOptions[0]?.textContent;
+    const bankCode = selectedBank?.code;
+    const bankName = selectedBank?.name;
     const accountNumber = document.getElementById("bankAccountNumberInput").value.trim();
 
     if (!bankCode || !resolvedAccountName) {

@@ -522,8 +522,9 @@ exports.resolveBankAccount = onCall({ secrets: [PAYSTACK_SECRET] }, async (reque
     });
     return { accountName: res.data.data.account_name };
   } catch (err) {
+    const paystackMessage = err.response?.data?.message;
     console.error("resolveBankAccount error:", err.response?.data || err.message);
-    throw new HttpsError("not-found", "Couldn't verify that account. Check the details and try again.");
+    throw new HttpsError("not-found", paystackMessage || "Couldn't verify that account. Check the details and try again.");
   }
 });
 
