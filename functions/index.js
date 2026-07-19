@@ -32,13 +32,12 @@ const SINGLE_TX_LIMIT = 500000;  // ₦5,000
 const DAILY_LIMIT = 2000000;     // ₦20,000
 const MAX_PIN_ATTEMPTS = 4;
 
-// Excludes visually-ambiguous characters (0/O, 1/I/L)
-const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+// Letters only, no digits. Excludes I and O — too easily
+// confused with each other (and with 1/0) when read off a screen.
+const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 function generateWalletCode() {
-  const part = () =>
-    Array.from({ length: 3 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("");
-  return `${part()}-${part()}`;
+  return Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("");
 }
 
 async function uniqueWalletCode() {
@@ -103,21 +102,121 @@ exports.getWalletStatus = onCall(async (request) => {
 });
 
 // ============================================================
-// setPin — callable. Used for first-time PIN setup (?setup=pin)
-// and for changing the PIN later from settings.
+// setPin — callable. FIRST-TIME setup only (?setup=pin). Once a
+// PIN exists, this refuses — changing it has to go through
+// changePin (know your PIN) or resetPinAfterReauth (forgot your
+// PIN) instead, never through here. Otherwise anyone holding an
+// unlocked phone could silently overwrite the PIN.
 // ============================================================
 exports.setPin = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
 
   const { pin } = request.data;
-  if (typeof pin !== "string" || !/^\d{4,6}$/.test(pin)) {
-    throw new HttpsError("invalid-argument", "PIN must be 4-6 digits.");
+  if (typeof pin !== "string" || !/^\d{4}$/.test(pin)) {
+    throw new HttpsError("invalid-argument", "PIN must be exactly 4 digits.");
+  }
+
+  const securityRef = db.collection("wallets").doc(uid).collection("private").doc("security");
+  const securitySnap = await securityRef.get();
+  if (securitySnap.exists && securitySnap.data().pinSet) {
+    throw new HttpsError(
+      "failed-precondition",
+      "A PIN is already set. Use the change-PIN flow instead."
+    );
   }
 
   const pinHash = await bcrypt.hash(pin, 10);
-  await db.collection("wallets").doc(uid).collection("private").doc("security").set(
+  await securityRef.set(
     { pinHash, pinSet: true, failedPinAttempts: 0, locked: false },
+    { merge: true }
+  );
+  return { success: true };
+});
+
+// ============================================================
+// changePin — callable. Used from Settings when the student
+// DOES know their current PIN. Requires it, so someone who's
+// just picked up an unlocked phone can't silently take over the
+// wallet. Reuses the same failed-attempt lockout as chargeWallet
+// — same threat model, same defense.
+// ============================================================
+exports.changePin = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+
+  const { currentPin, newPin } = request.data;
+  if (typeof currentPin !== "string" || !/^\d{4}$/.test(currentPin)) {
+    throw new HttpsError("invalid-argument", "Invalid current PIN.");
+  }
+  if (typeof newPin !== "string" || !/^\d{4}$/.test(newPin)) {
+    throw new HttpsError("invalid-argument", "New PIN must be exactly 4 digits.");
+  }
+
+  const securityRef = db.collection("wallets").doc(uid).collection("private").doc("security");
+  const securitySnap = await securityRef.get();
+  if (!securitySnap.exists || !securitySnap.data().pinSet) {
+    throw new HttpsError("failed-precondition", "No PIN set yet.");
+  }
+  const security = securitySnap.data();
+  if (security.locked) {
+    throw new HttpsError("permission-denied", "This wallet is locked. Log out and back in to unlock it.");
+  }
+
+  const matches = await bcrypt.compare(currentPin, security.pinHash);
+  if (!matches) {
+    const attempts = (security.failedPinAttempts || 0) + 1;
+    const update = { failedPinAttempts: attempts };
+    if (attempts >= MAX_PIN_ATTEMPTS) update.locked = true;
+    await securityRef.set(update, { merge: true });
+    throw new HttpsError(
+      "permission-denied",
+      attempts >= MAX_PIN_ATTEMPTS
+        ? "Wrong PIN. This wallet is now locked."
+        : `Wrong current PIN. ${MAX_PIN_ATTEMPTS - attempts} attempt(s) left.`
+    );
+  }
+
+  const newHash = await bcrypt.hash(newPin, 10);
+  await securityRef.set(
+    { pinHash: newHash, failedPinAttempts: 0, locked: false },
+    { merge: true }
+  );
+  return { success: true };
+});
+
+// ============================================================
+// resetPinAfterReauth — callable. Used from "Forgot PIN?" when
+// the student does NOT know their current PIN. Instead of the
+// PIN, this trusts that the client just re-authenticated with
+// their ACCOUNT PASSWORD via Firebase Auth's
+// reauthenticateWithCredential, which refreshes auth_time on the
+// ID token. We check auth_time is recent (last 5 min) rather
+// than trusting anything the client sends us directly — that
+// claim is set by Firebase itself and can't be forged.
+// ============================================================
+exports.resetPinAfterReauth = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+
+  const authTime = request.auth?.token?.auth_time;
+  const nowSeconds = Date.now() / 1000;
+  const REAUTH_WINDOW_SECONDS = 5 * 60;
+  if (!authTime || nowSeconds - authTime > REAUTH_WINDOW_SECONDS) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Please re-enter your account password to continue."
+    );
+  }
+
+  const { newPin } = request.data;
+  if (typeof newPin !== "string" || !/^\d{4}$/.test(newPin)) {
+    throw new HttpsError("invalid-argument", "New PIN must be exactly 4 digits.");
+  }
+
+  const newHash = await bcrypt.hash(newPin, 10);
+  await db.collection("wallets").doc(uid).collection("private").doc("security").set(
+    { pinHash: newHash, pinSet: true, failedPinAttempts: 0, locked: false },
     { merge: true }
   );
   return { success: true };
@@ -144,7 +243,8 @@ exports.chargeWallet = onCall(async (request) => {
   if (amt > SINGLE_TX_LIMIT) {
     throw new HttpsError("failed-precondition", "This exceeds the ₦5,000 per-transaction limit.");
   }
-  if (typeof pin !== "string" || !/^\d{4,6}$/.test(pin)) {
+  // in chargeWallet
+  if (typeof pin !== "string" || !/^\d{4}$/.test(pin)) {
     throw new HttpsError("invalid-argument", "Invalid PIN.");
   }
 

@@ -124,11 +124,11 @@
     align-items:center; justify-content:center; padding:20px; z-index:100;
   }
   .modal-backdrop.open{display:flex;}
-  .modal{ background:var(--card); border-radius:20px; padding:28px 24px; width:100%; max-width:380px; box-shadow:var(--shadow-pop); }
+  .modal{ background:var(--card); border-radius:20px; padding:28px 24px; width:100%; max-width:380px; max-height:88vh; overflow-y:auto; box-shadow:var(--shadow-pop); }
   .modal h2{font-size:20px; font-weight:700;}
   .modal p.sub{margin-top:6px; font-size:13.5px; color:var(--ink-soft);}
   .pin-input{
-    width:100%; margin-top:20px; padding:14px; border-radius:12px; border:1px solid var(--line);
+    width:100%; margin-top:8px; padding:12px; border-radius:12px; border:1px solid var(--line);
     font-size:22px; text-align:center; letter-spacing:0.4em; font-family:'Space Grotesk', sans-serif;
   }
   .pin-input:focus-visible{ outline:2px solid var(--green); border-color:var(--green); }
@@ -157,9 +157,11 @@
 <div class="modal-backdrop" id="pinSetupModal">
   <div class="modal">
     <h2>Set your wallet PIN</h2>
-    <p class="sub">You'll enter this PIN on a vendor's device to authorize charges. Choose 4–6 digits — don't use anything obvious like 1234.</p>
+    <p class="sub">You'll enter this PIN on a vendor's device to authorize charges. Choose 4 digits. Don't use anything obvious like 1234.</p>
     <div class="form-error" id="pinSetupError"></div>
-    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" class="pin-input" id="pinSetupInput" placeholder="••••" />
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="pinSetupInput" placeholder="••••" autocomplete="off" name="wallet-pin-new" />
+    <label style="display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-top:14px;">Re-enter PIN</label>
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="pinSetupConfirmInput" placeholder="••••" autocomplete="off" name="wallet-pin-confirm" style="margin-top:8px;" />
     <div class="modal-actions">
       <button class="btn btn-primary btn-full" id="pinSetupSubmit">Set PIN</button>
     </div>
@@ -172,7 +174,7 @@
     <h2>Student: enter your PIN</h2>
     <p class="sub" id="pinEntrySub">This confirms the charge — not the vendor's PIN.</p>
     <div class="form-error" id="pinEntryError"></div>
-    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" class="pin-input" id="pinEntryInput" placeholder="••••" />
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="pinEntryInput" placeholder="••••" autocomplete="off" name="wallet-pin-charge" />
     <div class="modal-actions">
       <button class="btn btn-ghost" id="pinEntryCancel">Cancel</button>
       <button class="btn btn-primary" id="pinEntryConfirm">Confirm</button>
@@ -192,16 +194,55 @@
     </div>
 
     <div id="profilePinChangeSection" style="margin-top:18px;">
-      <div class="form-error" id="profilePinError"></div>
-      <div class="form-success" id="profilePinSuccess"></div>
-      <label for="profilePinInput" style="font-size:13px; font-weight:600; color:var(--ink-soft);" id="profilePinLabel">Set your PIN</label>
-      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" class="pin-input" id="profilePinInput" placeholder="••••" style="margin-top:8px;" />
-      <button class="btn btn-primary btn-full" id="profilePinSubmit" style="margin-top:12px;">Save PIN</button>
-    </div>
+  <div class="form-error" id="profilePinError"></div>
+  <div class="form-success" id="profilePinSuccess"></div>
+
+  <div id="profileCurrentPinRow" style="display:none;">
+    <label for="profileCurrentPinInput" style="font-size:13px; font-weight:600; color:var(--ink-soft);">Current PIN</label>
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="profileCurrentPinInput" placeholder="••••" autocomplete="off" name="wallet-pin-current" style="margin-top:8px;" />
+  </div>
+
+  <label for="profilePinInput" style="display:block; font-size:13px; font-weight:600; color:var(--ink-soft); margin-top:10px;" id="profilePinLabel">Set your PIN</label>
+  <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="profilePinInput" placeholder="••••" autocomplete="off" name="wallet-pin-profile-new" style="margin-top:8px;" />
+  <label for="profilePinConfirmInput" style="display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-top:10px;">Re-enter PIN</label>
+  <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="profilePinConfirmInput" placeholder="••••" autocomplete="off" name="wallet-pin-profile-confirm" style="margin-top:8px;" />
+  <button class="btn btn-primary btn-full" id="profilePinSubmit" style="margin-top:10px;">Save PIN</button>
+  <button class="btn btn-ghost btn-full" id="forgotPinLink" style="margin-top:8px; display:none;">Forgot your PIN?</button>
+</div>
 
     <div class="modal-actions">
       <button class="btn btn-ghost btn-full" id="profileCloseBtn">Close</button>
       <button class="btn btn-ghost btn-full" id="profileLogoutBtn" style="color:var(--red); border-color:rgba(181,68,46,0.25);">Log out</button>
+    </div>
+  </div>
+</div>
+
+<!-- FORGOT PIN MODAL -->
+<div class="modal-backdrop" id="forgotPinModal">
+  <div class="modal">
+    <h2>Reset your PIN</h2>
+    <p class="sub" id="forgotPinSub">Enter your account password to confirm it's you, then choose a new PIN.</p>
+
+    <div id="forgotPinStepPassword">
+      <div class="form-error" id="forgotPinPasswordError"></div>
+      <div class="field" style="margin-top:14px;">
+        <label>Account password</label>
+        <input type="password" id="forgotPinPasswordInput" autocomplete="current-password" />
+      </div>
+      <button class="btn btn-primary btn-full" id="forgotPinVerifyBtn" style="margin-top:8px;">Verify</button>
+    </div>
+
+    <div id="forgotPinStepNewPin" style="display:none;">
+      <div class="form-error" id="forgotPinNewPinError"></div>
+      <label style="font-size:13px; font-weight:600; color:var(--ink-soft);">New PIN</label>
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="forgotPinNewPinInput" placeholder="••••" autocomplete="off" name="wallet-pin-reset-new" style="margin-top:8px;" />
+      <label style="display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-top:14px;">Re-enter new PIN</label>
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="forgotPinNewPinConfirmInput" placeholder="••••" autocomplete="off" name="wallet-pin-reset-confirm" style="margin-top:8px;" />
+      <button class="btn btn-primary btn-full" id="forgotPinSaveBtn" style="margin-top:12px;">Save new PIN</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-full" id="forgotPinCloseBtn">Close</button>
     </div>
   </div>
 </div>
@@ -286,7 +327,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import { getAuth, onAuthStateChanged, signOut, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
   import {
     getFirestore, doc, getDoc, updateDoc,
     collection, query, where, orderBy, limit, getDocs
@@ -309,6 +350,8 @@
 
   const getWalletStatus = httpsCallable(functions, "getWalletStatus");
   const setPinFn = httpsCallable(functions, "setPin");
+  const changePinFn = httpsCallable(functions, "changePin");
+  const resetPinAfterReauthFn = httpsCallable(functions, "resetPinAfterReauth");
   const chargeWalletFn = httpsCallable(functions, "chargeWallet");
   const initiateTopupFn = httpsCallable(functions, "initiateTopup");
   const verifyTopupFn = httpsCallable(functions, "verifyTopup");
@@ -318,6 +361,13 @@
   const requestWithdrawalFn = httpsCallable(functions, "requestWithdrawal");
 
   const naira = (kobo) => `₦${(kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 })}`;
+
+  // Strips anything that isn't a digit, live, as the user types.
+  function lockToDigits(el, maxLen = 4) {
+    el.addEventListener("input", () => {
+      el.value = el.value.replace(/\D/g, "").slice(0, maxLen);
+    });
+  }
 
   let currentUser = null;
   let currentWallet = null;
@@ -332,6 +382,14 @@
     currentUser = user;
     await boot();
   });
+
+  [
+    "pinSetupInput", "pinSetupConfirmInput",
+    "pinEntryInput",
+    "profilePinInput", "profilePinConfirmInput",
+    "profileCurrentPinInput",
+    "forgotPinNewPinInput", "forgotPinNewPinConfirmInput"
+  ].forEach(id => lockToDigits(document.getElementById(id)));
 
   async function doLogout() {
     await signOut(auth);
@@ -350,44 +408,153 @@
     document.getElementById("profileEmail").textContent = currentUser.email || "—";
     document.getElementById("profileCode").textContent = currentWallet?.walletCode || "—";
     document.getElementById("profilePinStatus").textContent = currentPinSet ? "Set" : "Not set";
-    document.getElementById("profilePinLabel").textContent = currentPinSet ? "Change your PIN" : "Set your PIN";
+    document.getElementById("profilePinLabel").textContent = currentPinSet ? "New PIN" : "Set your PIN";
     document.getElementById("profilePinSubmit").textContent = currentPinSet ? "Update PIN" : "Save PIN";
+    document.getElementById("profileCurrentPinRow").style.display = currentPinSet ? "block" : "none";
+    document.getElementById("forgotPinLink").style.display = currentPinSet ? "block" : "none";
+    document.getElementById("profileCurrentPinInput").value = "";
     document.getElementById("profilePinInput").value = "";
+    document.getElementById("profilePinConfirmInput").value = "";
     document.getElementById("profilePinError").classList.remove("visible");
     document.getElementById("profilePinSuccess").classList.remove("visible");
     document.getElementById("profileModal").classList.add("open");
   }
 
   document.getElementById("profilePinSubmit").addEventListener("click", async () => {
-    const pin = document.getElementById("profilePinInput").value.trim();
-    const errorEl = document.getElementById("profilePinError");
-    const successEl = document.getElementById("profilePinSuccess");
-    const submitBtn = document.getElementById("profilePinSubmit");
-    errorEl.classList.remove("visible");
-    successEl.classList.remove("visible");
+  const currentPin = document.getElementById("profileCurrentPinInput").value.trim();
+  const pin = document.getElementById("profilePinInput").value.trim();
+  const confirmPin = document.getElementById("profilePinConfirmInput").value.trim();
+  const errorEl = document.getElementById("profilePinError");
+  const successEl = document.getElementById("profilePinSuccess");
+  const submitBtn = document.getElementById("profilePinSubmit");
+  errorEl.classList.remove("visible");
+  successEl.classList.remove("visible");
 
-    if (!/^\d{4,6}$/.test(pin)) {
-      errorEl.textContent = "PIN must be 4-6 digits.";
+  if (currentPinSet && !/^\d{4}$/.test(currentPin)) {
+    errorEl.textContent = "Enter your current PIN.";
+    errorEl.classList.add("visible");
+    return;
+  }
+  if (!/^\d{4}$/.test(pin)) {
+    errorEl.textContent = "PIN must be exactly 4 digits.";
+    errorEl.classList.add("visible");
+    return;
+  }
+  if (pin !== confirmPin) {
+    errorEl.textContent = "PINs don't match. Try again.";
+    errorEl.classList.add("visible");
+    document.getElementById("profilePinConfirmInput").value = "";
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Saving…";
+  try {
+    if (currentPinSet) {
+      await changePinFn({ currentPin, newPin: pin });
+    } else {
+      await setPinFn({ pin });
+    }
+    currentPinSet = true;
+    document.getElementById("profilePinStatus").textContent = "Set";
+    document.getElementById("profilePinLabel").textContent = "New PIN";
+    document.getElementById("profileCurrentPinRow").style.display = "block";
+    document.getElementById("forgotPinLink").style.display = "block";
+    document.getElementById("profileCurrentPinInput").value = "";
+    document.getElementById("profilePinInput").value = "";
+    document.getElementById("profilePinConfirmInput").value = "";
+    successEl.textContent = "PIN saved.";
+    successEl.classList.add("visible");
+    setTimeout(() => document.getElementById("profileModal").classList.remove("open"), 1200);
+  } catch (err) {
+    errorEl.textContent = err?.message || "Couldn't save your PIN. Try again.";
+    errorEl.classList.add("visible");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Update PIN";
+  }
+});
+
+  // ---------- Forgot PIN: reauthenticate with account password,
+  // then set a brand new PIN. The only path that doesn't require
+  // the current PIN — it substitutes account-password
+  // verification instead, via Firebase Auth's own reauth flow.
+  // ----------
+  document.getElementById("forgotPinLink").addEventListener("click", () => {
+    document.getElementById("forgotPinStepPassword").style.display = "block";
+    document.getElementById("forgotPinStepNewPin").style.display = "none";
+    document.getElementById("forgotPinPasswordInput").value = "";
+    document.getElementById("forgotPinPasswordError").classList.remove("visible");
+    document.getElementById("profileModal").classList.remove("open");
+    document.getElementById("forgotPinModal").classList.add("open");
+  });
+
+  document.getElementById("forgotPinCloseBtn").addEventListener("click", () => {
+    document.getElementById("forgotPinModal").classList.remove("open");
+  });
+
+  document.getElementById("forgotPinVerifyBtn").addEventListener("click", async () => {
+    const password = document.getElementById("forgotPinPasswordInput").value;
+    const errorEl = document.getElementById("forgotPinPasswordError");
+    const btn = document.getElementById("forgotPinVerifyBtn");
+    errorEl.classList.remove("visible");
+
+    if (!password) {
+      errorEl.textContent = "Enter your account password.";
       errorEl.classList.add("visible");
       return;
     }
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Saving…";
+    btn.disabled = true;
+    btn.textContent = "Verifying…";
     try {
-      await setPinFn({ pin });
-      currentPinSet = true;
-      document.getElementById("profilePinStatus").textContent = "Set";
-      document.getElementById("profilePinLabel").textContent = "Change your PIN";
-      document.getElementById("profilePinInput").value = "";
-      successEl.textContent = "PIN saved.";
-      successEl.classList.add("visible");
+      const credential = EmailAuthProvider.credential(currentUser.email, password);
+      await reauthenticateWithCredential(currentUser, credential);
+      document.getElementById("forgotPinStepPassword").style.display = "none";
+      document.getElementById("forgotPinStepNewPin").style.display = "block";
+      document.getElementById("forgotPinNewPinInput").value = "";
+      document.getElementById("forgotPinNewPinConfirmInput").value = "";
+      document.getElementById("forgotPinNewPinError").classList.remove("visible");
     } catch (err) {
-      errorEl.textContent = err?.message || "Couldn't save your PIN. Try again.";
+      errorEl.textContent = "Wrong password. Try again.";
       errorEl.classList.add("visible");
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = currentPinSet ? "Update PIN" : "Save PIN";
+      btn.disabled = false;
+      btn.textContent = "Verify";
+    }
+  });
+
+  document.getElementById("forgotPinSaveBtn").addEventListener("click", async () => {
+    const newPin = document.getElementById("forgotPinNewPinInput").value.trim();
+    const confirmPin = document.getElementById("forgotPinNewPinConfirmInput").value.trim();
+    const errorEl = document.getElementById("forgotPinNewPinError");
+    const btn = document.getElementById("forgotPinSaveBtn");
+    errorEl.classList.remove("visible");
+
+    if (!/^\d{4}$/.test(newPin)) {
+      errorEl.textContent = "PIN must be exactly 4 digits.";
+      errorEl.classList.add("visible");
+      return;
+    }
+    if (newPin !== confirmPin) {
+      errorEl.textContent = "PINs don't match. Try again.";
+      errorEl.classList.add("visible");
+      document.getElementById("forgotPinNewPinConfirmInput").value = "";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Saving…";
+    try {
+      await resetPinAfterReauthFn({ newPin });
+      currentPinSet = true;
+      document.getElementById("forgotPinModal").classList.remove("open");
+    } catch (err) {
+      errorEl.textContent = err?.message || "Couldn't reset your PIN. Try again.";
+      errorEl.classList.add("visible");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Save new PIN";
     }
   });
 
@@ -488,7 +655,7 @@
           <div class="form-success" id="chargeSuccess"></div>
           <div class="field">
             <label for="studentCodeInput">Student code</label>
-            <input type="text" id="studentCodeInput" placeholder="A29-4K7" autocomplete="off" style="text-transform:uppercase;" />
+            <input type="text" id="studentCodeInput" placeholder="ABCD" autocomplete="off" style="text-transform:uppercase;" maxlength="4" />
           </div>
           <div class="field">
             <label for="amountInput">Amount</label>
@@ -619,7 +786,7 @@
     const confirmBtn = document.getElementById("pinEntryConfirm");
     errorEl.classList.remove("visible");
 
-    if (!/^\d{4,6}$/.test(pin)) {
+    if (!/^\d{4}$/.test(pin)) {
       errorEl.textContent = "Enter a valid PIN.";
       errorEl.classList.add("visible");
       return;
@@ -658,34 +825,40 @@
 
   // ---------- First-time PIN setup ----------
   document.getElementById("pinSetupSubmit").addEventListener("click", async () => {
-    const pin = document.getElementById("pinSetupInput").value.trim();
-    const errorEl = document.getElementById("pinSetupError");
-    const submitBtn = document.getElementById("pinSetupSubmit");
-    errorEl.classList.remove("visible");
+  const pin = document.getElementById("pinSetupInput").value.trim();
+  const confirmPin = document.getElementById("pinSetupConfirmInput").value.trim();
+  const errorEl = document.getElementById("pinSetupError");
+  const submitBtn = document.getElementById("pinSetupSubmit");
+  errorEl.classList.remove("visible");
 
-    if (!/^\d{4,6}$/.test(pin)) {
-      errorEl.textContent = "PIN must be 4-6 digits.";
-      errorEl.classList.add("visible");
-      return;
-    }
+  if (!/^\d{4}$/.test(pin)) {
+    errorEl.textContent = "PIN must be exactly 4 digits.";
+    errorEl.classList.add("visible");
+    return;
+  }
+  if (pin !== confirmPin) {
+    errorEl.textContent = "PINs don't match. Try again.";
+    errorEl.classList.add("visible");
+    document.getElementById("pinSetupConfirmInput").value = "";
+    return;
+  }
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Saving…";
-    try {
-      await setPinFn({ pin });
-      currentPinSet = true;
-      document.getElementById("pinSetupModal").classList.remove("open");
-      // Clean the ?setup=pin param out of the URL
-      const url = new URL(window.location.href);
-      url.searchParams.delete("setup");
-      window.history.replaceState({}, "", url);
-    } catch (err) {
-      errorEl.textContent = err?.message || "Couldn't save your PIN. Try again.";
-      errorEl.classList.add("visible");
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Set PIN";
-    }
-  });
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Saving…";
+  try {
+    await setPinFn({ pin });
+    currentPinSet = true;
+    document.getElementById("pinSetupModal").classList.remove("open");
+    const url = new URL(window.location.href);
+    url.searchParams.delete("setup");
+    window.history.replaceState({}, "", url);
+  } catch (err) {
+    errorEl.textContent = err?.message || "Couldn't save your PIN. Try again.";
+    errorEl.classList.add("visible");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Set PIN";
+  }
+});
 
   // ============================================================
   // TOP UP
