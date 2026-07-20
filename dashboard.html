@@ -405,6 +405,7 @@
   const requestWithdrawalFn = httpsCallable(functions, "requestWithdrawal");
 
   const naira = (kobo) => `₦${(kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 })}`;
+  const chargeConfirmedSound = new Audio("chargeconfirmed.mp3");
 
   // Strips anything that isn't a digit, live, as the user types.
   function lockToDigits(el, maxLen = 4) {
@@ -883,6 +884,9 @@
         amount: pendingCharge.amountKobo,
         pin
       });
+
+      chargeConfirmedSound.currentTime = 0;
+      chargeConfirmedSound.play().catch(() => {}); // ignore if autoplay is blocked
 
       document.getElementById("pinEntryModal").classList.remove("open");
       document.getElementById("chargeSuccess").textContent = "Charge confirmed.";
