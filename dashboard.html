@@ -216,6 +216,17 @@
   </div>
 </div>
 
+<!-- TELEGRAM LINK MODAL (required onboarding step) -->
+<div class="modal-backdrop" id="telegramLinkModal">
+  <div class="modal">
+    <h2>Connect Telegram</h2>
+    <p class="sub">We'll send you a daily reminder of your wallet code on Telegram, so vendors can always reach you if you forget it.</p>
+    <div class="form-error" id="telegramLinkError"></div>
+    <a class="btn btn-primary btn-full" id="telegramLinkBtn" href="#" target="_blank" rel="noopener" style="margin-top:16px;">Preparing link…</a>
+    <p class="qr-hint" style="margin-top:14px;">After you tap Start in Telegram, this screen continues automatically.</p>
+  </div>
+</div>
+
 <!-- PROFILE MODAL -->
 <div class="modal-backdrop" id="profileModal">
   <div class="modal">
@@ -403,6 +414,7 @@
   const resolveBankAccountFn = httpsCallable(functions, "resolveBankAccount");
   const saveBankAccountFn = httpsCallable(functions, "saveBankAccount");
   const requestWithdrawalFn = httpsCallable(functions, "requestWithdrawal");
+  const createTelegramLinkTokenFn = httpsCallable(functions, "createTelegramLinkToken");
 
   const naira = (kobo) => `₦${(kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 })}`;
   const chargeConfirmedSound = new Audio("chargeconfirmed.mp3");
@@ -672,6 +684,8 @@
       }
       if (!status.pinSet || params.get("setup") === "pin") {
         document.getElementById("pinSetupModal").classList.add("open");
+      } else if (!currentWallet.telegramLinked) {
+        openTelegramLinkModal();
       }
     } catch (err) {
       // getWalletStatus can be briefly unreachable right after a fresh
@@ -697,6 +711,37 @@
     el.style.fontSize = "13.5px";
     el.textContent = message;
     document.getElementById("dashboardRoot").prepend(el);
+  }
+
+  let telegramPollTimer = null;
+
+  async function openTelegramLinkModal() {
+    const errorEl = document.getElementById("telegramLinkError");
+    const linkBtn = document.getElementById("telegramLinkBtn");
+    errorEl.classList.remove("visible");
+    linkBtn.textContent = "Preparing link…";
+
+    try {
+      const { data } = await createTelegramLinkTokenFn();
+      linkBtn.href = `https://t.me/MoneyPadi_bot?start=${data.token}`;
+      linkBtn.textContent = "Open Telegram to connect";
+    } catch (err) {
+      errorEl.textContent = "Couldn't start Telegram linking. Refresh and try again.";
+      errorEl.classList.add("visible");
+    }
+
+    document.getElementById("telegramLinkModal").classList.add("open");
+    if (!telegramPollTimer) telegramPollTimer = setInterval(checkTelegramLinked, 3000);
+  }
+
+  async function checkTelegramLinked() {
+    const walletSnap = await getDoc(doc(db, "wallets", currentUser.uid));
+    currentWallet = walletSnap.data();
+    if (currentWallet.telegramLinked) {
+      clearInterval(telegramPollTimer);
+      telegramPollTimer = null;
+      document.getElementById("telegramLinkModal").classList.remove("open");
+    }
   }
 
   function renderDashboard() {
@@ -938,6 +983,9 @@
     const url = new URL(window.location.href);
     url.searchParams.delete("setup");
     window.history.replaceState({}, "", url);
+    if (!currentWallet.telegramLinked) {
+      openTelegramLinkModal();
+    }
   } catch (err) {
     errorEl.textContent = err?.message || "Couldn't save your PIN. Try again.";
     errorEl.classList.add("visible");

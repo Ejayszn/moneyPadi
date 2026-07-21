@@ -5,12 +5,16 @@ const admin = require("firebase-admin");
 const bcrypt = require("bcryptjs");
 const axios = require("axios");
 const crypto = require("crypto");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 
 admin.initializeApp();
 const db = admin.firestore();
 
 const PAYSTACK_SECRET = defineSecret("PAYSTACK_SECRET");
 const PAYSTACK_BASE = "https://api.paystack.co";
+const TELEGRAM_BOT_TOKEN = defineSecret("TELEGRAM_BOT_TOKEN");
+const TELEGRAM_WEBHOOK_SECRET = defineSecret("TELEGRAM_WEBHOOK_SECRET");
+const TELEGRAM_API_BASE = "https://api.telegram.org/bot";
 
 // ---- Topup ----
 const TOPUP_MARGIN = 1000; // ₦10 in kobo — flat MoneyPadi margin on every topup
@@ -47,6 +51,18 @@ async function uniqueWalletCode() {
     if (existing.empty) return code;
   }
   throw new Error("Could not generate a unique wallet code after 10 tries");
+}
+
+function generateTelegramLinkToken() {
+  return crypto.randomBytes(16).toString("hex");
+}
+
+async function sendTelegramMessage(chatId, text) {
+  await axios.post(
+    `${TELEGRAM_API_BASE}${TELEGRAM_BOT_TOKEN.value()}/sendMessage`,
+    { chat_id: chatId, text, parse_mode: "HTML" },
+    { timeout: 10000 }
+  );
 }
 
 // ============================================================
@@ -620,3 +636,113 @@ exports.requestWithdrawal = onCall({ secrets: [PAYSTACK_SECRET] }, async (reques
     throw new HttpsError("internal", "Withdrawal failed. Your balance has been refunded.");
   }
 });
+
+// ============================================================
+// TELEGRAM — required onboarding step + daily code reminder
+// ============================================================
+
+// createTelegramLinkToken — callable. Dashboard calls this to get a
+// one-time token, embeds it in a t.me/<bot>?start=<token> deep link.
+// Telegram hands that token back to us on /start via the webhook.
+exports.createTelegramLinkToken = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+
+  const token = generateTelegramLinkToken();
+  await db.collection("telegramLinkTokens").doc(token).set({
+    uid,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return { token };
+});
+
+// telegramWebhook — receives every message sent to the bot. We only
+// act on /start <token> (completes linking) and /stop (unlinks).
+// Verified via the secret_token Telegram echoes back on every call,
+// which we set ourselves when registering the webhook (see setup notes).
+exports.telegramWebhook = onRequest(
+  { secrets: [TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET] },
+  async (req, res) => {
+    if (req.headers["x-telegram-bot-api-secret-token"] !== TELEGRAM_WEBHOOK_SECRET.value()) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    const message = req.body?.message;
+    const chatId = message?.chat?.id;
+    const text = (message?.text || "").trim();
+
+    try {
+      if (chatId && text.startsWith("/start")) {
+        const token = text.split(" ")[1];
+        if (!token) {
+          await sendTelegramMessage(chatId, "Welcome to MoneyPadi. Open the app and tap \"Connect Telegram\" to link your account.");
+          return res.status(200).send("OK");
+        }
+
+        const tokenRef = db.collection("telegramLinkTokens").doc(token);
+        const tokenSnap = await tokenRef.get();
+        if (!tokenSnap.exists) {
+          await sendTelegramMessage(chatId, "That link has expired. Go back to MoneyPadi and tap \"Connect Telegram\" again.");
+          return res.status(200).send("OK");
+        }
+
+        const { uid } = tokenSnap.data();
+        const walletRef = db.collection("wallets").doc(uid);
+        await walletRef.collection("private").doc("telegram").set({
+          chatId,
+          linkedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        // Reverse index so /stop can find the wallet from a chatId alone
+        await db.collection("telegramChats").doc(String(chatId)).set({ uid });
+        await walletRef.set({ telegramLinked: true }, { merge: true });
+        await tokenRef.delete();
+
+        await sendTelegramMessage(chatId, "You're linked! I'll remind you of your MoneyPadi code here every morning.");
+      } else if (chatId && text === "/stop") {
+        const chatLinkRef = db.collection("telegramChats").doc(String(chatId));
+        const chatLinkSnap = await chatLinkRef.get();
+        if (chatLinkSnap.exists) {
+          const { uid } = chatLinkSnap.data();
+          await db.collection("wallets").doc(uid).collection("private").doc("telegram").delete();
+          await db.collection("wallets").doc(uid).set({ telegramLinked: false }, { merge: true });
+          await chatLinkRef.delete();
+          await sendTelegramMessage(chatId, "You're unlinked. Reconnect anytime from your MoneyPadi profile.");
+        }
+      }
+      return res.status(200).send("OK");
+    } catch (err) {
+      console.error("telegramWebhook error:", err.response?.data || err.message);
+      return res.status(200).send("OK"); // 200 always — avoid Telegram retry storms
+    }
+  }
+);
+
+// dailyTelegramReminder — scheduled, runs once a day. Kept deliberately
+// simple/sequential with a small delay between sends; at your current
+// scale this is nowhere near Telegram's rate limits, and it's easy to
+// parallelize later if the user base grows.
+exports.dailyTelegramReminder = onSchedule(
+  { schedule: "0 7 * * *", timeZone: "Africa/Lagos", secrets: [TELEGRAM_BOT_TOKEN] },
+  async () => {
+    const walletsSnap = await db.collection("wallets").where("telegramLinked", "==", true).get();
+
+    for (const walletDoc of walletsSnap.docs) {
+      try {
+        const telegramSnap = await walletDoc.ref.collection("private").doc("telegram").get();
+        if (!telegramSnap.exists) continue;
+
+        const wallet = walletDoc.data();
+        const { chatId } = telegramSnap.data();
+        const firstName = (wallet.displayName || "").split(" ")[0] || "there";
+
+        await sendTelegramMessage(
+          chatId,
+          `Morning, ${firstName} ☀️ Hope today goes well.\n\nQuick reminder — your MoneyPadi code is <b>${wallet.walletCode}</b>.`
+        );
+        await new Promise((r) => setTimeout(r, 50));
+      } catch (err) {
+        console.error(`dailyTelegramReminder failed for ${walletDoc.id}:`, err.response?.data || err.message);
+      }
+    }
+  }
+);
