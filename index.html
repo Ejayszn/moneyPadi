@@ -1086,14 +1086,6 @@ mobileMenu.querySelectorAll('a').forEach(link => {
 });
 </script>
 <script>
-    const target = document.getElementById('explode-text');
-    const chars = target.innerText.split('');
-    target.innerHTML = chars.map(char => {
-      if (char === ' ') return '<span class="exploding-space"></span>';
-      const randomDelay = (Math.random() * -0.15).toFixed(3);
-      return `<span class="exploding-letter" style="animation-delay: ${randomDelay}s;">${char}</span>`;
-    }).join('');
-
     // Unified Pay / Receive mode toggle
   const modeButtons = document.querySelectorAll('.mode-btn');
   const modePanels = {
