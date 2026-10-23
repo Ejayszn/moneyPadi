@@ -3,173 +3,687 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#12513E" />
+<meta name="theme-color" content="#0B3D2E" />
 <title>Dashboard | MoneyPadi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="alternate icon" href="favicon.ico">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 
 <style>
-  :root{
-    --ink:#0F1115; --ink-soft:#3A3F47;
-    --surface:#F7F5F0; --surface-dim:#EDEAE1; --card:#FFFFFF;
-    --green:#1A7A5E; --green-deep:#12513E; --amber:#E8A33D;
-    --line:rgba(15,17,21,0.10); --red:#B5442E;
-    --radius:18px;
-    --shadow-soft: 0 1px 2px rgba(15,17,21,0.04), 0 8px 24px rgba(15,17,21,0.06);
-    --shadow-pop: 0 4px 10px rgba(15,17,21,0.08), 0 20px 40px rgba(15,17,21,0.10);
+  :root {
+    --bg: #F4F2EC;
+    --bg-elevated: #FAF9F6;
+    --card: #FFFFFF;
+    --ink: #12141A;
+    --ink-muted: #5C6370;
+    --ink-faint: #8B929E;
+    --line: rgba(18, 20, 26, 0.08);
+    --line-strong: rgba(18, 20, 26, 0.14);
+    --green: #0F6B4F;
+    --green-deep: #0B3D2E;
+    --green-soft: rgba(15, 107, 79, 0.08);
+    --green-glow: rgba(15, 107, 79, 0.18);
+    --amber: #D4922A;
+    --amber-soft: rgba(212, 146, 42, 0.12);
+    --red: #C0392B;
+    --red-soft: rgba(192, 57, 43, 0.08);
+    --radius-sm: 12px;
+    --radius: 16px;
+    --radius-lg: 22px;
+    --radius-xl: 28px;
+    --shadow-sm: 0 1px 2px rgba(18, 20, 26, 0.04);
+    --shadow: 0 4px 16px rgba(18, 20, 26, 0.06), 0 1px 3px rgba(18, 20, 26, 0.04);
+    --shadow-lg: 0 12px 40px rgba(18, 20, 26, 0.1), 0 4px 12px rgba(18, 20, 26, 0.05);
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  body{ background:var(--surface); color:var(--ink); font-family:'Inter', system-ui, sans-serif; line-height:1.5; -webkit-font-smoothing:antialiased; }
-  h1,h2,h3,.display{ font-family:'Space Grotesk', system-ui, sans-serif; letter-spacing:-0.01em; line-height:1.1; }
-  a{color:inherit; text-decoration:none;}
-  button{font-family:inherit;}
-  .wrap{max-width:720px; margin:0 auto; padding:0 20px;}
-  @media (min-width: 900px){ .wrap{max-width:1040px;} }
 
-  header{ position:sticky; top:0; z-index:30; background:rgba(247,245,240,0.86); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); }
-  nav{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px; max-width:720px; margin:0 auto; }
-  @media (min-width: 900px){ nav{max-width:1040px;} }
-  .logo{ display:flex; align-items:center; gap:9px; font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:18px; }
-  .logo-mark{
-    width:30px; height:30px;
-    flex-shrink:0;
-}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 18px; border-radius:100px; font-weight:600; font-size:14px; border:1px solid transparent; cursor:pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease; }
-  .btn-primary{ background:var(--ink); color:white; }
-  .btn-primary:hover{ transform:translateY(-1px); box-shadow:var(--shadow-pop); }
-  .btn-primary:disabled{ opacity:0.55; cursor:not-allowed; transform:none; box-shadow:none; }
-  .btn-ghost{ background:transparent; color:var(--ink); border-color:var(--line); }
-  .btn-ghost:hover{ background:var(--surface-dim); }
-  .btn-full{width:100%;}
-
-  .avatar-btn{
-    padding:9px 18px; border-radius:100px; border:1px solid var(--line); cursor:pointer;
-    background:var(--card); color:var(--ink);
-    font-family:'Inter', sans-serif; font-weight:600; font-size:14px;
-    display:flex; align-items:center; justify-content:center; gap:6px;
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100dvh;
   }
-  .avatar-btn:hover{ background:var(--surface-dim); }
-  .avatar-btn .dot{ width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0; }
 
-  .profile-row{ display:flex; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--line); font-size:14px; }
-  .profile-row:last-of-type{border-bottom:none;}
-  .profile-row .k{color:var(--ink-soft);}
-  .profile-row .v{font-weight:600; text-align:right;}
+  h1, h2, h3, .display {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    font-weight: 600;
+  }
 
-  main{ padding:32px 0 80px; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; }
+
+  .wrap {
+    max-width: 440px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+  @media (min-width: 700px) {
+    .wrap { max-width: 680px; }
+  }
+  @media (min-width: 900px) {
+    .wrap { max-width: 960px; }
+  }
+
+  /* ── Header ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgba(244, 242, 236, 0.82);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border-bottom: 1px solid var(--line);
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    max-width: 440px;
+    margin: 0 auto;
+  }
+  @media (min-width: 700px) {
+    nav { max-width: 680px; }
+  }
+  @media (min-width: 900px) {
+    nav { max-width: 960px; }
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.03em;
+  }
+  .logo-mark {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+  }
+
+  .avatar-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px 8px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--line-strong);
+    background: var(--card);
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: background 0.2s var(--ease), box-shadow 0.2s var(--ease), transform 0.15s var(--ease);
+    box-shadow: var(--shadow-sm);
+  }
+  .avatar-btn:hover {
+    background: var(--bg-elevated);
+    box-shadow: var(--shadow);
+  }
+  .avatar-btn:active { transform: scale(0.97); }
+  .avatar-btn .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 3px var(--green-soft);
+  }
+
+  /* ── Main ── */
+  main {
+    padding: 28px 0 100px;
+  }
+
+  /* ── Balance card ── */
+  .balance-card {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(145deg, #0F6B4F 0%, #0B3D2E 55%, #082E22 100%);
+    border-radius: var(--radius-xl);
+    padding: 28px 26px 24px;
+    color: white;
+    box-shadow: 0 20px 50px rgba(11, 61, 46, 0.28), 0 8px 20px rgba(11, 61, 46, 0.15);
+  }
+  .balance-card::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 70%;
+    height: 120%;
+    background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .balance-card::after {
+    content: '';
+    position: absolute;
+    bottom: -30%;
+    left: -10%;
+    width: 50%;
+    height: 80%;
+    background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .balance-label {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.75;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    position: relative;
+  }
+  .balance-amount {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 44px;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    margin-top: 6px;
+    position: relative;
+  }
+  .balance-code {
+    margin-top: 12px;
+    font-size: 13px;
+    opacity: 0.8;
+    position: relative;
+  }
+  .balance-code b {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    opacity: 1;
+  }
+  .balance-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 22px;
+    position: relative;
+  }
+  .btn-balance {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    backdrop-filter: blur(8px);
+  }
+  .btn-balance:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .locked-banner {
+    margin-bottom: 16px;
+    background: var(--amber-soft);
+    border: 1px solid rgba(212, 146, 42, 0.28);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 13.5px;
+    color: var(--ink);
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 100px;
+    font-weight: 600;
+    font-size: 14px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform 0.15s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease), opacity 0.2s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--ink);
+    color: white;
+    box-shadow: 0 2px 8px rgba(18, 20, 26, 0.15);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 4px 16px rgba(18, 20, 26, 0.2);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--line-strong);
+  }
+  .btn-ghost:hover { background: rgba(18, 20, 26, 0.04); }
+  .btn-full { width: 100%; }
+
+  /* ── Mode toggle ── */
+  .mode-toggle {
+    display: inline-flex;
+    padding: 4px;
+    background: rgba(18, 20, 26, 0.06);
+    border-radius: 100px;
+    margin: 28px 0 22px;
+    gap: 2px;
+  }
+  .mode-btn {
+    padding: 10px 28px;
+    border-radius: 100px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-muted);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    transition: all 0.25s var(--ease);
+  }
+  .mode-btn.active {
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm), 0 1px 3px rgba(18, 20, 26, 0.06);
+  }
+  .mode-panel { display: none; }
+  .mode-panel.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    padding: 22px 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--line);
+  }
+  .card:last-child { margin-bottom: 0; }
+  .card h3 {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 16px;
+  }
+
+  @media (min-width: 700px) {
+    .mode-panel.active {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .card { margin-bottom: 0; }
+  }
+
+  /* ── Code display (pay) ── */
+  .code-display {
+    text-align: center;
+    padding: 32px 20px;
+    background: linear-gradient(180deg, var(--bg) 0%, var(--bg-elevated) 100%);
+    border-radius: var(--radius);
+    border: 1px dashed var(--line-strong);
+  }
+  .qr-code-text {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 42px;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    color: var(--ink);
+  }
+  .qr-hint {
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-muted);
+    margin-top: 14px;
+    line-height: 1.45;
+  }
+
+  /* ── Forms ── */
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    margin-bottom: 16px;
+  }
+  .field label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+  .field input {
+    width: 100%;
+    padding: 13px 15px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--line);
+    background: var(--bg-elevated);
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+  .field input:focus {
+    border-color: var(--green);
+    background: var(--card);
+    box-shadow: 0 0 0 3px var(--green-soft);
+  }
+  .amount-prefix { position: relative; }
+  .amount-prefix span {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-muted);
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .amount-prefix input { padding-left: 32px; }
+
+  /* ── Transaction rows ── */
+  .tx-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .tx-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .tx-row:first-child { padding-top: 0; }
+  .tx-row .name { font-weight: 550; font-size: 14.5px; }
+  .tx-row .meta {
+    color: var(--ink-faint);
+    font-size: 12.5px;
+    margin-top: 2px;
+  }
+  .tx-row .amt {
+    font-weight: 650;
+    font-size: 14.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .tx-row .amt.out { color: var(--red); }
+  .tx-row .amt.in { color: var(--green); }
+  .empty-state {
+    text-align: center;
+    padding: 28px 0 12px;
+    color: var(--ink-faint);
+    font-size: 14px;
+  }
+
+  /* ── Form feedback ── */
+  .form-error {
+    display: none;
+    font-size: 13px;
+    color: var(--red);
+    background: var(--red-soft);
+    border: 1px solid rgba(192, 57, 43, 0.18);
+    border-radius: 10px;
+    padding: 11px 13px;
+    margin-bottom: 14px;
+  }
+  .form-error.visible { display: block; }
+  .form-success {
+    display: none;
+    font-size: 13px;
+    color: var(--green-deep);
+    background: var(--green-soft);
+    border: 1px solid rgba(15, 107, 79, 0.18);
+    border-radius: 10px;
+    padding: 11px 13px;
+    margin-bottom: 14px;
+  }
+  .form-success.visible { display: block; }
+
+  /* ── Modals ── */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 14, 18, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--card);
+    border-radius: var(--radius-xl);
+    padding: 28px 24px;
+    width: 100%;
+    max-width: 400px;
+    max-height: 88vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--line);
+    animation: modalIn 0.3s var(--ease);
+  }
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(12px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .modal h2 {
+    font-size: 21px;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+  }
+  .modal p.sub {
+    margin-top: 6px;
+    font-size: 14px;
+    color: var(--ink-muted);
+    line-height: 1.45;
+  }
+  .pin-input {
+    width: 100%;
+    margin-top: 8px;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--line);
+    background: var(--bg-elevated);
+    font-size: 24px;
+    text-align: center;
+    letter-spacing: 0.45em;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .pin-input:focus {
+    border-color: var(--green);
+    background: var(--card);
+    box-shadow: 0 0 0 3px var(--green-soft);
+  }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .modal-actions .btn { flex: 1; }
+
+  /* Profile rows */
+  .profile-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .profile-row:last-of-type { border-bottom: none; }
+  .profile-row .k { color: var(--ink-muted); }
+  .profile-row .v { font-weight: 600; text-align: right; }
+
+  /* Bank select */
+  .bank-select-trigger {
+    width: 100%;
+    padding: 13px 15px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--line);
+    background: var(--bg-elevated);
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .bank-select-trigger:hover { background: var(--card); }
+  .bank-select-trigger .placeholder { color: var(--ink-faint); }
+  .bank-select-chevron {
+    flex-shrink: 0;
+    color: var(--ink-faint);
+    transition: transform 0.2s var(--ease);
+    margin-left: 8px;
+  }
+  .bank-select-trigger[aria-expanded="true"] .bank-select-chevron {
+    transform: rotate(180deg);
+  }
+  .bank-select-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: var(--card);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+  .bank-select-panel.open { display: block; }
+  .bank-select-search {
+    width: 100%;
+    padding: 13px 15px;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    background: var(--card);
+    color: var(--ink);
+  }
+  .bank-select-list { max-height: 220px; overflow-y: auto; }
+  .bank-select-option {
+    padding: 12px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--ink);
+    transition: background 0.15s;
+  }
+  .bank-select-option:hover { background: var(--bg); }
+  .bank-select-empty {
+    padding: 16px;
+    font-size: 13.5px;
+    color: var(--ink-faint);
+    text-align: center;
+  }
+
+  .loading-row {
+    text-align: center;
+    padding: 80px 0;
+    color: var(--ink-muted);
+    font-size: 15px;
+  }
+
+  /* ── Loading skeleton ── */
+  @keyframes shimmer {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
+  }
+  @keyframes skelIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .skel-root { animation: skelIn 0.35s var(--ease); }
+
+  /* Shimmer blocks: .sk on light surfaces, .sk-light on the green card */
+  .sk, .sk-light {
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+    border-radius: 8px;
+  }
+  .sk {
+    background-image: linear-gradient(90deg, rgba(18,20,26,0.06) 25%, rgba(18,20,26,0.12) 37%, rgba(18,20,26,0.06) 63%);
+  }
+  .sk-light {
+    background-image: linear-gradient(90deg, rgba(255,255,255,0.10) 25%, rgba(255,255,255,0.24) 37%, rgba(255,255,255,0.10) 63%);
+  }
+  .sk-pill { border-radius: 100px; }
 
   /* Balance card */
-  .balance-card{
-    background:linear-gradient(155deg, var(--green) 0%, var(--green-deep) 100%);
-    border-radius:22px; padding:28px 26px; color:white; box-shadow:var(--shadow-pop);
+  .skel-balance {
+    background: linear-gradient(145deg, #0F6B4F 0%, #0B3D2E 55%, #082E22 100%);
+    border-radius: var(--radius-xl);
+    padding: 28px 26px 24px;
+    box-shadow: 0 20px 50px rgba(11, 61, 46, 0.28), 0 8px 20px rgba(11, 61, 46, 0.15);
   }
-  .balance-label{ font-size:12.5px; font-weight:600; opacity:0.85; text-transform:uppercase; letter-spacing:0.06em; }
-  .balance-amount{ font-family:'Space Grotesk', sans-serif; font-size:40px; font-weight:700; margin-top:8px; }
-  .balance-code{ margin-top:14px; font-size:13px; opacity:0.85; }
-  .balance-actions{ display:flex; gap:10px; margin-top:20px; }
-  .btn-balance{ flex:1; background:rgba(255,255,255,0.14); color:white; border:1px solid rgba(255,255,255,0.25); }
-  .btn-balance:hover{ background:rgba(255,255,255,0.22); }
-  .balance-code b{ font-family:'Space Grotesk', sans-serif; letter-spacing:0.04em; }
-  .locked-banner{
-    margin-top:36px; background:rgba(0,0,0,0.18); border-radius:12px; padding:10px 14px; font-size:13px;
+  .skel-balance .amount { margin-top: 14px; }
+  .skel-balance .code { margin-top: 16px; }
+  .skel-balance .actions { display: flex; gap: 10px; margin-top: 22px; }
+  .skel-balance .actions .sk-light { flex: 1; height: 42px; }
+
+  /* Toggle */
+  .skel-toggle {
+    display: inline-flex;
+    gap: 2px;
+    padding: 4px;
+    background: rgba(18, 20, 26, 0.06);
+    border-radius: 100px;
+    margin: 28px 0 22px;
+  }
+  .skel-toggle .sk { width: 86px; height: 38px; }
+  .skel-toggle .sk.on { background: var(--card); animation: none; box-shadow: var(--shadow-sm); }
+
+  /* Cards */
+  .skel-card {
+    background: var(--card);
+    border-radius: var(--radius-lg);
+    padding: 22px 20px;
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-sm);
+  }
+  .skel-card .heading { width: 110px; height: 10px; margin-bottom: 18px; }
+  .skel-code-box { height: 104px; border-radius: var(--radius); }
+  .skel-hint { margin: 16px auto 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .skel-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .skel-row:first-of-type { padding-top: 0; }
+  .skel-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .skel-row .left { display: flex; flex-direction: column; gap: 8px; }
+
+  @media (min-width: 700px) {
+    .skel-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+    .skel-card { margin-bottom: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sk, .sk-light, .skel-root { animation: none; }
   }
 
-  /* Mode toggle */
-  .mode-toggle{ display:inline-flex; padding:4px; background:var(--surface-dim); border-radius:100px; margin:24px 0 20px; gap:4px; }
-  .mode-btn{ padding:9px 22px; border-radius:100px; font-size:14px; font-weight:600; color:var(--ink-soft); cursor:pointer; border:none; background:transparent; }
-  .mode-btn.active{ background:var(--ink); color:white; }
-  .mode-panel{display:none;}
-  .mode-panel.active{display:block;}
-
-  .card{ padding-bottom:24px; margin-bottom:24px; border-bottom:1px solid var(--line); }
-.card:last-child{ border-bottom:none; margin-bottom:0; padding-bottom:0; }
-@media (min-width: 900px){
-    .mode-panel.active{ display:grid; grid-template-columns: 1fr 1fr; gap:32px; align-items:start; }
-    .card{ border-bottom:none; margin-bottom:0; padding-bottom:0; }
-}
-.card h3{font-size:13px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:14px;}
-
-  /* Pay panel: QR */
-  .code-display{
-    text-align:center; padding:28px 20px;
-    background:var(--surface-dim); border-radius:16px; border:1px solid var(--line);
+  /* Subtle scrollbar for modals */
+  .modal::-webkit-scrollbar { width: 6px; }
+  .modal::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border-radius: 3px;
   }
-  .qr-code-text{ font-family:'Space Grotesk', sans-serif; font-size:36px; font-weight:700; letter-spacing:0.08em; }
-  .qr-hint{ text-align:center; font-size:13px; color:var(--ink-soft); margin-top:14px; }
-
-  /* Receive panel: charge form */
-  .field{display:flex; flex-direction:column; gap:6px; margin-bottom:14px;}
-  .field label{font-size:13px; font-weight:600; color:var(--ink-soft);}
-  .field input{ width:100%; padding:12px 14px; border-radius:11px; border:1px solid var(--line); background:var(--card); font-size:14.5px; font-family:inherit; color:var(--ink); outline-offset:2px; }
-  .field input:focus-visible{ outline:2px solid var(--green); border-color:var(--green); }
-  .amount-prefix{ position:relative; }
-  .amount-prefix span{ position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--ink-soft); font-size:14.5px; }
-  .amount-prefix input{ padding-left:30px; }
-
-  /* Transaction history */
-  .tx-row{ display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--line); font-size:14px; }
-  .tx-row:last-child{border-bottom:none;}
-  .tx-row .name{font-weight:500;}
-  .tx-row .meta{color:var(--ink-soft); font-size:12.5px; margin-top:2px;}
-  .tx-row .amt.out{color:var(--red); font-weight:600;}
-  .tx-row .amt.in{color:var(--green-deep); font-weight:600;}
-  .empty-state{ text-align:center; padding:20px 0; color:var(--ink-soft); font-size:13.5px; }
-
-  .form-error{ display:none; font-size:13px; color:var(--red); background:rgba(181,68,46,0.08); border:1px solid rgba(181,68,46,0.2); border-radius:10px; padding:10px 13px; margin-bottom:14px; }
-  .form-error.visible{display:block;}
-  .form-success{ display:none; font-size:13px; color:var(--green-deep); background:rgba(26,122,94,0.08); border:1px solid rgba(26,122,94,0.2); border-radius:10px; padding:10px 13px; margin-bottom:14px; }
-  .form-success.visible{display:block;}
-
-  /* Modal (PIN setup + PIN entry) */
-  .modal-backdrop{
-    display:none; position:fixed; inset:0; background:rgba(15,17,21,0.5);
-    align-items:center; justify-content:center; padding:20px; z-index:100;
-  }
-  .modal-backdrop.open{display:flex;}
-  .modal{ background:var(--card); border-radius:20px; padding:28px 24px; width:100%; max-width:380px; max-height:88vh; overflow-y:auto; box-shadow:var(--shadow-pop); }
-  .modal h2{font-size:20px; font-weight:700;}
-  .modal p.sub{margin-top:6px; font-size:13.5px; color:var(--ink-soft);}
-  .pin-input{
-    width:100%; margin-top:8px; padding:12px; border-radius:12px; border:1px solid var(--line);
-    font-size:22px; text-align:center; letter-spacing:0.4em; font-family:'Space Grotesk', sans-serif;
-  }
-  .pin-input:focus-visible{ outline:2px solid var(--green); border-color:var(--green); }
-
-  /* Custom bank dropdown — replaces the native <select> so it can
-     actually be themed, plus gets a search box since the bank list
-     is long. */
-  .bank-select-trigger{
-    width:100%; padding:12px 14px; border-radius:11px; border:1px solid var(--line);
-    background:var(--card); font-family:inherit; font-size:14.5px; color:var(--ink);
-    display:flex; align-items:center; justify-content:space-between; cursor:pointer; text-align:left;
-  }
-  .bank-select-trigger:hover{ background:var(--surface-dim); }
-  .bank-select-trigger .placeholder{ color:var(--ink-soft); }
-  .bank-select-chevron{ flex-shrink:0; color:var(--ink-soft); transition:transform 0.15s ease; margin-left:8px; }
-  .bank-select-trigger[aria-expanded="true"] .bank-select-chevron{ transform:rotate(180deg); }
-  .bank-select-panel{
-    display:none; position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:50;
-    background:var(--card); border:1px solid var(--line); border-radius:14px;
-    box-shadow:var(--shadow-pop); overflow:hidden;
-  }
-  .bank-select-panel.open{ display:block; }
-  .bank-select-search{
-    width:100%; padding:12px 14px; border:none; border-bottom:1px solid var(--line);
-    font-family:inherit; font-size:14px; outline:none; background:var(--card); color:var(--ink);
-  }
-  .bank-select-list{ max-height:220px; overflow-y:auto; }
-  .bank-select-option{ padding:11px 14px; font-size:14px; cursor:pointer; color:var(--ink); }
-  .bank-select-option:hover{ background:var(--surface-dim); }
-  .bank-select-empty{ padding:14px; font-size:13.5px; color:var(--ink-soft); text-align:center; }
-  .modal-actions{ display:flex; gap:10px; margin-top:20px; }
-  .modal-actions .btn{flex:1;}
-
-  .loading-row{ text-align:center; padding:40px 0; color:var(--ink-soft); font-size:14px; }
 </style>
 </head>
 <body>
@@ -183,7 +697,62 @@
 
 <main>
   <div class="wrap" id="dashboardRoot">
-    <div class="loading-row" id="loadingRow">Loading your wallet…</div>
+    <div id="loadingRow" class="skel-root" aria-busy="true" aria-label="Loading your wallet">
+
+      <!-- Balance card -->
+      <div class="skel-balance">
+        <div class="sk-light" style="width:96px; height:10px;"></div>
+        <div class="sk-light amount" style="width:190px; height:42px;"></div>
+        <div class="sk-light code" style="width:120px; height:12px;"></div>
+        <div class="actions">
+          <div class="sk-light sk-pill"></div>
+          <div class="sk-light sk-pill"></div>
+        </div>
+      </div>
+
+      <!-- Pay / Receive toggle -->
+      <div class="skel-toggle">
+        <div class="sk sk-pill on"></div>
+        <div class="sk sk-pill"></div>
+      </div>
+
+      <!-- Panels -->
+      <div class="skel-panels">
+        <div class="skel-card">
+          <div class="sk heading"></div>
+          <div class="sk skel-code-box"></div>
+          <div class="skel-hint">
+            <div class="sk" style="width:85%; height:10px;"></div>
+            <div class="sk" style="width:55%; height:10px;"></div>
+          </div>
+        </div>
+
+        <div class="skel-card">
+          <div class="sk heading"></div>
+          <div class="skel-row">
+            <div class="left">
+              <div class="sk" style="width:120px; height:12px;"></div>
+              <div class="sk" style="width:80px; height:9px;"></div>
+            </div>
+            <div class="sk" style="width:64px; height:12px;"></div>
+          </div>
+          <div class="skel-row">
+            <div class="left">
+              <div class="sk" style="width:95px; height:12px;"></div>
+              <div class="sk" style="width:70px; height:9px;"></div>
+            </div>
+            <div class="sk" style="width:56px; height:12px;"></div>
+          </div>
+          <div class="skel-row">
+            <div class="left">
+              <div class="sk" style="width:110px; height:12px;"></div>
+              <div class="sk" style="width:76px; height:9px;"></div>
+            </div>
+            <div class="sk" style="width:60px; height:12px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -194,7 +763,7 @@
     <p class="sub">You'll enter this PIN on a vendor's device to authorize charges. Choose 4 digits. Don't use anything obvious like 1234.</p>
     <div class="form-error" id="pinSetupError"></div>
     <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="pinSetupInput" placeholder="••••" autocomplete="off" name="wallet-pin-new" />
-    <label style="display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-top:14px;">Re-enter PIN</label>
+    <label style="display:block; font-size:12.5px; font-weight:600; color:var(--ink-muted); margin-top:14px;">Re-enter PIN</label>
     <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="pinSetupConfirmInput" placeholder="••••" autocomplete="off" name="wallet-pin-confirm" style="margin-top:8px;" />
     <div class="modal-actions">
       <button class="btn btn-primary btn-full" id="pinSetupSubmit">Set PIN</button>
@@ -243,13 +812,13 @@
   <div class="form-success" id="profilePinSuccess"></div>
 
   <div id="profileCurrentPinRow" style="display:none;">
-    <label for="profileCurrentPinInput" style="font-size:13px; font-weight:600; color:var(--ink-soft);">Current PIN</label>
+    <label for="profileCurrentPinInput" style="font-size:13px; font-weight:600; color:var(--ink-muted);">Current PIN</label>
     <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="profileCurrentPinInput" placeholder="••••" autocomplete="off" name="wallet-pin-current" style="margin-top:8px;" />
   </div>
 
-  <label for="profilePinInput" style="display:block; font-size:13px; font-weight:600; color:var(--ink-soft); margin-top:10px;" id="profilePinLabel">Set your PIN</label>
+  <label for="profilePinInput" style="display:block; font-size:13px; font-weight:600; color:var(--ink-muted); margin-top:10px;" id="profilePinLabel">Set your PIN</label>
   <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="profilePinInput" placeholder="••••" autocomplete="off" name="wallet-pin-profile-new" style="margin-top:8px;" />
-  <label for="profilePinConfirmInput" style="display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-top:10px;">Re-enter PIN</label>
+  <label for="profilePinConfirmInput" style="display:block; font-size:12.5px; font-weight:600; color:var(--ink-muted); margin-top:10px;">Re-enter PIN</label>
   <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="profilePinConfirmInput" placeholder="••••" autocomplete="off" name="wallet-pin-profile-confirm" style="margin-top:8px;" />
   <button class="btn btn-primary btn-full" id="profilePinSubmit" style="margin-top:10px;">Save PIN</button>
   <button class="btn btn-ghost btn-full" id="forgotPinLink" style="margin-top:8px; display:none;">Forgot your PIN?</button>
@@ -257,7 +826,7 @@
 
     <div class="modal-actions">
       <button class="btn btn-ghost btn-full" id="profileCloseBtn">Close</button>
-      <button class="btn btn-ghost btn-full" id="profileLogoutBtn" style="color:var(--red); border-color:rgba(181,68,46,0.25);">Log out</button>
+      <button class="btn btn-ghost btn-full" id="profileLogoutBtn" style="color:var(--red); border-color:rgba(192,57,43,0.25);">Log out</button>
     </div>
   </div>
 </div>
@@ -284,9 +853,9 @@
 
     <div id="forgotPinStepNewPin" style="display:none;">
       <div class="form-error" id="forgotPinNewPinError"></div>
-      <label style="font-size:13px; font-weight:600; color:var(--ink-soft);">New PIN</label>
+      <label style="font-size:13px; font-weight:600; color:var(--ink-muted);">New PIN</label>
       <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="forgotPinNewPinInput" placeholder="••••" autocomplete="off" name="wallet-pin-reset-new" style="margin-top:8px;" />
-      <label style="display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-top:14px;">Re-enter new PIN</label>
+      <label style="display:block; font-size:12.5px; font-weight:600; color:var(--ink-muted); margin-top:14px;">Re-enter new PIN</label>
       <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="pin-input" id="forgotPinNewPinConfirmInput" placeholder="••••" autocomplete="off" name="wallet-pin-reset-confirm" style="margin-top:8px;" />
       <button class="btn btn-primary btn-full" id="forgotPinSaveBtn" style="margin-top:12px;">Save new PIN</button>
     </div>
@@ -315,8 +884,8 @@
 
     <div id="topupStepTransfer" style="display:none;">
       <div class="code-display" style="margin-top:4px;">
-        <div style="font-size:13px; color:var(--ink-soft); margin-bottom:6px;">Transfer exactly</div>
-        <div class="qr-code-text" id="topupTotalAmount" style="font-size:30px;">—</div>
+        <div style="font-size:13px; color:var(--ink-muted); margin-bottom:6px;">Transfer exactly</div>
+        <div class="qr-code-text" id="topupTotalAmount" style="font-size:32px; letter-spacing:0.04em;">—</div>
       </div>
       <div style="margin-top:14px;">
         <div class="profile-row"><span class="k">Bank</span><span class="v" id="topupBankName">—</span></div>
@@ -663,7 +1232,9 @@
       await new Promise(r => setTimeout(r, 1500));
       const retrySnap = await getDoc(walletRef);
       if (!retrySnap.exists()) {
-        document.getElementById("loadingRow").textContent =
+        const loadingEl = document.getElementById("loadingRow");
+        loadingEl.className = "loading-row";
+        loadingEl.textContent =
           "Still setting up your wallet — refresh in a few seconds.";
         return;
       }
@@ -701,14 +1272,6 @@
   function showToastBanner(message) {
     const el = document.createElement("div");
     el.className = "locked-banner";
-    el.style.marginTop = "0";
-    el.style.marginBottom = "16px";
-    el.style.background = "rgba(232,163,61,0.15)";
-    el.style.color = "var(--ink)";
-    el.style.border = "1px solid rgba(232,163,61,0.35)";
-    el.style.borderRadius = "12px";
-    el.style.padding = "12px 14px";
-    el.style.fontSize = "13.5px";
     el.textContent = message;
     document.getElementById("dashboardRoot").prepend(el);
   }
@@ -768,7 +1331,7 @@
           <div class="code-display">
             <div class="qr-code-text">${currentWallet.walletCode}</div>
           </div>
-          <div class="qr-hint">Works even without your own network, the vendor's connection carries it.</div>
+          <div class="qr-hint">Works even without your own network — the vendor's connection carries it.</div>
         </div>
         <div class="card">
           <h3>Recent charges</h3>
@@ -1041,7 +1604,7 @@
       document.getElementById("topupAccountNumber").textContent =
         details.account_number || details.identifier || "—";
       document.getElementById("topupAccountName").textContent =
-        details.account_name || details.account_expires_at ? (details.account_name || "MoneyPadi") : "—";
+        details.account_name || "MoneyPadi";
 
       document.getElementById("topupStepAmount").style.display = "none";
       document.getElementById("topupStepTransfer").style.display = "block";
