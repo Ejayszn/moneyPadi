@@ -16,6 +16,108 @@ const TELEGRAM_BOT_TOKEN = defineSecret("TELEGRAM_BOT_TOKEN");
 const TELEGRAM_WEBHOOK_SECRET = defineSecret("TELEGRAM_WEBHOOK_SECRET");
 const TELEGRAM_API_BASE = "https://api.telegram.org/bot";
 
+
+// ---- Admin + charge notifications ----
+const ADMIN_EMAILS = ["emmyogs007@gmail.com"]; // must be a verified email
+
+function assertAdmin(request) {
+  const t = request.auth?.token;
+  if (!t || !t.email_verified || !ADMIN_EMAILS.includes((t.email || "").toLowerCase())) {
+    throw new HttpsError("permission-denied", "Admins only.");
+  }
+}
+
+const escHtml = (s) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+// Tells the student about every completed charge, by Telegram only.
+async function notifyCharge({ studentUid, studentEmail, vendorName, amount }) {
+  const amountText = `₦${(amount / 100).toLocaleString("en-NG")}`;
+  const when = new Date().toLocaleString("en-NG", {
+    timeZone: "Africa/Lagos", day: "numeric", month: "short", hour: "numeric", minute: "2-digit",
+  });
+  try {
+    const tg = await db.collection("wallets").doc(studentUid).collection("private").doc("telegram").get();
+    if (tg.exists) {
+      await sendTelegramMessage(
+        tg.data().chatId,
+        `<b>${amountText}</b> was charged to your saved card by <b>${escHtml(vendorName)}</b> (${when}).\n\nNot you? Contact MoneyPadi support right away.`
+      );
+    }
+  } catch (err) {
+    console.error("notifyCharge telegram failed:", err.response?.data || err.message);
+    // The student blocked the bot: stop charging them until they reconnect
+    if (err.response?.status === 403) {
+      await db.collection("wallets").doc(studentUid).set({ telegramLinked: false }, { merge: true });
+    }
+  }
+}
+
+exports.adminOverview = onCall(async (request) => {
+  assertAdmin(request);
+  const [txSnap, walletSnap, disputeSnap] = await Promise.all([
+    db.collection("transactions").orderBy("createdAt", "desc").limit(200).get(),
+    db.collection("wallets").limit(300).get(),
+    db.collection("disputes").orderBy("createdAt", "desc").limit(100).get(),
+  ]);
+  const transactions = txSnap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((x) => x.payerUid) // charges only, skips old topups/withdrawals
+    .map((x) => ({
+      id: x.id,
+      payerName: x.payerName || "",
+      vendorName: x.vendorName || "",
+      amount: x.amount || 0,
+      status: x.status || "",
+      createdAt: x.createdAt?.toMillis?.() || 0,
+      evidence: x.evidence || null,
+      gatewayResponse: x.gatewayResponse || "",
+      reported: !!x.reported,
+    }));
+  const people = walletSnap.docs.map((d) => {
+    const w = d.data();
+    return {
+      uid: d.id,
+      name: w.displayName || "",
+      email: w.email || "",
+      code: w.walletCode || "",
+      card: w.cardOnFile?.last4 || "",
+      payout: w.bankOnFile?.bankName || "",
+      vendorApproved: !!w.vendorApproved,
+      frozen: !!w.frozen,
+    };
+  });
+  const disputes = disputeSnap.docs.map((d) => {
+    const x = d.data();
+    return {
+      id: d.id,
+      txId: x.txId || d.id,
+      payerName: x.payerName || "",
+      vendorName: x.vendorName || "",
+      vendorUid: x.vendorUid || "",
+      amount: x.amount || 0,
+      note: x.note || "",
+      status: x.status || "open",
+      createdAt: x.createdAt?.toMillis?.() || 0,
+    };
+  });
+  return { transactions, people, disputes };
+});
+
+exports.adminSetFlags = onCall(async (request) => {
+  assertAdmin(request);
+  const { uid, vendorApproved, frozen } = request.data || {};
+  if (typeof uid !== "string" || !uid) throw new HttpsError("invalid-argument", "Missing user.");
+  const update = {};
+  if (typeof vendorApproved === "boolean") update.vendorApproved = vendorApproved;
+  if (typeof frozen === "boolean") update.frozen = frozen;
+  if (!Object.keys(update).length) throw new HttpsError("invalid-argument", "Nothing to change.");
+  await db.collection("wallets").doc(uid).set(update, { merge: true });
+  await db.collection("adminLog").add({
+    by: request.auth.uid, uid, update, at: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  return { success: true };
+});
+
 // ---- Topup ----
 const TOPUP_MARGIN = 1000; // ₦10 in kobo — flat MoneyPadi margin on every topup
 
@@ -32,9 +134,12 @@ function stampDuty(amountKobo) {
 }
 
 // ---- Limits (kobo — 1 naira = 100 kobo, keeps everything integer) ----
-const SINGLE_TX_LIMIT = 500000;  // ₦5,000
-const DAILY_LIMIT = 2000000;     // ₦20,000
+const SINGLE_TX_LIMIT = 200000;     // ₦2,000 per charge (pilot)
+const DAILY_LIMIT = 500000;         // ₦5,000 per student per day (pilot)
+const VENDOR_DAILY_LIMIT = 3000000; // ₦30,000 per vendor per day (pilot), change to taste
+const VENDOR_MAX_BAD_PINS = 10;     // wrong PINs typed on one vendor's device in a day before auto-freeze
 const MAX_PIN_ATTEMPTS = 4;
+const naira0 = (kobo) => "₦" + (kobo / 100).toLocaleString("en-NG");
 
 // Letters only, no digits. Excludes I and O — too easily
 // confused with each other (and with 1/0) when read off a screen.
@@ -244,7 +349,11 @@ exports.resetPinAfterReauth = onCall(async (request) => {
 // PIN verification, limit checks, and the fund transfer in one
 // atomic Firestore transaction.
 // ============================================================
-exports.chargeWallet = onCall(async (request) => {
+// Who pays Paystack's fee on each charge: "subaccount" = the vendor,
+// "account" = MoneyPadi. Your call, decide before launch.
+const FEE_BEARER = "subaccount";
+
+exports.chargeWallet = onCall({ secrets: [PAYSTACK_SECRET, TELEGRAM_BOT_TOKEN] }, async (request) => {
   const vendorUid = request.auth?.uid;
   if (!vendorUid) throw new HttpsError("unauthenticated", "You need to be logged in.");
 
@@ -257,7 +366,7 @@ exports.chargeWallet = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "Invalid amount.");
   }
   if (amt > SINGLE_TX_LIMIT) {
-    throw new HttpsError("failed-precondition", "This exceeds the ₦5,000 per-transaction limit.");
+    throw new HttpsError("failed-precondition", `This exceeds the ${naira0(SINGLE_TX_LIMIT)} per-transaction limit.`);
   }
   // in chargeWallet
   if (typeof pin !== "string" || !/^\d{4}$/.test(pin)) {
@@ -283,12 +392,26 @@ exports.chargeWallet = onCall(async (request) => {
   const vendorWalletRef = walletsRef.doc(vendorUid);
   const txRef = db.collection("transactions").doc();
 
-  return db.runTransaction(async (t) => {
-    const [securitySnap, studentWalletSnap, vendorWalletSnap] = await Promise.all([
+  const studentCardRef = studentWalletRef.collection("private").doc("card");
+  const vendorBankRef = vendorWalletRef.collection("private").doc("bank");
+  const vendorSecurityRef = vendorWalletRef.collection("private").doc("security");
+  const systemRef = db.collection("config").doc("system");
+
+  const reserved = await db.runTransaction(async (t) => {
+    const [securitySnap, studentWalletSnap, vendorWalletSnap, cardSnap, vendorBankSnap, vendorSecSnap, systemSnap] = await Promise.all([
       t.get(studentSecurityRef),
       t.get(studentWalletRef),
       t.get(vendorWalletRef),
+      t.get(studentCardRef),
+      t.get(vendorBankRef),
+      t.get(vendorSecurityRef),
+      t.get(systemRef),
     ]);
+    if (systemSnap.exists && systemSnap.data().chargingPaused === true) {
+      throw new HttpsError("unavailable", "Charging is paused for now. Try again later.");
+    }
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const vendorSec = vendorSecSnap.exists ? vendorSecSnap.data() : {};
 
     if (!securitySnap.exists || !studentWalletSnap.exists || !vendorWalletSnap.exists) {
       throw new HttpsError("not-found", "Wallet not fully set up.");
@@ -297,6 +420,15 @@ exports.chargeWallet = onCall(async (request) => {
     const studentWallet = studentWalletSnap.data();
     const vendorWallet = vendorWalletSnap.data();
 
+    if (!vendorWallet.vendorApproved) {
+      throw new HttpsError("permission-denied", "Your vendor account isn't approved yet. Contact MoneyPadi.");
+    }
+    if (vendorWallet.frozen || studentWallet.frozen) {
+      throw new HttpsError("permission-denied", "This account is frozen. Contact MoneyPadi.");
+    }
+    if (!studentWallet.telegramLinked) {
+      throw new HttpsError("failed-precondition", "This student hasn't connected Telegram yet. They need to open MoneyPadi and connect it first.");
+    }
     if (!security.pinSet) {
       throw new HttpsError("failed-precondition", "This student hasn't set up a PIN yet.");
     }
@@ -310,170 +442,157 @@ exports.chargeWallet = onCall(async (request) => {
       const update = { failedPinAttempts: attempts };
       if (attempts >= MAX_PIN_ATTEMPTS) update.locked = true;
       t.set(studentSecurityRef, update, { merge: true });
-      throw new HttpsError(
-        "permission-denied",
-        attempts >= MAX_PIN_ATTEMPTS
-          ? "Wrong PIN. This wallet is now locked."
-          : `Wrong PIN. ${MAX_PIN_ATTEMPTS - attempts} attempt(s) left.`
-      );
+      // Count wrong PINs per vendor per day; freeze a vendor who keeps guessing
+      const badPins = (vendorSec.badPinDate === todayKey ? (vendorSec.badPinCount || 0) : 0) + 1;
+      t.set(vendorSecurityRef, { badPinDate: todayKey, badPinCount: badPins }, { merge: true });
+      if (badPins >= VENDOR_MAX_BAD_PINS) {
+        t.set(vendorWalletRef, { frozen: true, frozenReason: "Too many wrong PINs" }, { merge: true });
+      }
+      // Return instead of throwing: a throw inside a Firestore transaction
+      // rolls it back, so the failed-attempt count would never be saved.
+      return {
+        pinError:
+          attempts >= MAX_PIN_ATTEMPTS
+            ? "Wrong PIN. This wallet is now locked."
+            : `Wrong PIN. ${MAX_PIN_ATTEMPTS - attempts} attempt(s) left.`,
+      };
     }
 
     // Daily cap resets automatically on a new calendar day
     const todayStr = new Date().toISOString().slice(0, 10);
     const dailySpent = security.dailySpentDate === todayStr ? (security.dailySpent || 0) : 0;
     if (dailySpent + amt > DAILY_LIMIT) {
-      throw new HttpsError("failed-precondition", "This would exceed the ₦20,000 daily limit.");
+      throw new HttpsError("failed-precondition", `This would exceed the ${naira0(DAILY_LIMIT)} daily limit.`);
     }
-    if ((studentWallet.balance || 0) < amt) {
-      throw new HttpsError("failed-precondition", "Insufficient balance.");
+    const vendorToday = vendorSec.vendorDailyDate === todayKey ? (vendorSec.vendorDailyTotal || 0) : 0;
+    if (vendorToday + amt > VENDOR_DAILY_LIMIT) {
+      throw new HttpsError("failed-precondition", "This vendor has reached today's limit. Try again tomorrow.");
+    }
+    if (!cardSnap.exists) {
+      throw new HttpsError("failed-precondition", "This student hasn't added a card yet.");
+    }
+    if (!vendorBankSnap.exists || !vendorBankSnap.data().subaccountCode) {
+      throw new HttpsError("failed-precondition", "Link your payout account first so you can receive payments.");
     }
 
-    t.update(studentWalletRef, { balance: admin.firestore.FieldValue.increment(-amt) });
-    t.update(vendorWalletRef, { balance: admin.firestore.FieldValue.increment(amt) });
+    // Reserve the daily allowance and record the charge as pending.
+    // The Paystack call happens AFTER this transaction, because network
+    // calls don't belong inside a Firestore transaction (it can retry).
     t.set(
       studentSecurityRef,
       { failedPinAttempts: 0, dailySpent: dailySpent + amt, dailySpentDate: todayStr },
       { merge: true }
     );
+    t.set(vendorSecurityRef, { vendorDailyDate: todayKey, vendorDailyTotal: vendorToday + amt }, { merge: true });
     t.set(txRef, {
       payerUid: studentUid,
       payerName: studentWallet.displayName || "",
       vendorUid: vendorUid,
       vendorName: vendorWallet.displayName || "",
       amount: amt,
-      status: "completed",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    return { success: true, txId: txRef.id };
-  });
-});
-
-// ============================================================
-// TOPUP FLOW — Pay with Transfer only. Flat ₦10 (1000 kobo)
-// MoneyPadi margin on every topup, regardless of size.
-// ============================================================
-
-exports.initiateTopup = onCall({ secrets: [PAYSTACK_SECRET] }, async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
-
-  const amountKobo = Math.round(Number(request.data?.amount));
-  if (!Number.isFinite(amountKobo) || amountKobo <= 0) {
-    throw new HttpsError("invalid-argument", "Invalid amount.");
-  }
-
-  const userRecord = await admin.auth().getUser(uid);
-  const totalChargeKobo = amountKobo + TOPUP_MARGIN;
-  const topupRef = db.collection("topups").doc(); // reference = Firestore doc id
-  const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 min window
-
-  try {
-    const chargeRes = await axios.post(
-      `${PAYSTACK_BASE}/charge`,
-      {
-        email: userRecord.email,
-        amount: totalChargeKobo,
-        currency: "NGN",
-        reference: topupRef.id,
-        bank_transfer: { account_expires_at: expiresAt },
-      },
-      { headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` }, timeout: 15000 }
-    );
-
-    // NOTE: verify this shape against a real sandbox response — Paystack's
-    // bank_transfer charge payload has shifted field names across API
-    // versions before. Check functions logs on first real test.
-    const details = chargeRes.data?.data;
-
-    await topupRef.set({
-      uid,
-      amountKobo,          // what the wallet gets credited
-      totalChargeKobo,     // what the student actually transfers
       status: "pending",
+      evidence: {
+        pinVerified: true,
+        ip: request.rawRequest?.ip || "",
+        userAgent: String(request.rawRequest?.headers?.["user-agent"] || "").slice(0, 200),
+        cardLast4: cardSnap.data().last4 || "",
+      },
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     return {
-      reference: topupRef.id,
-      totalChargeKobo,
-      bankDetails: details, // account_number, bank_name, account_expires_at, etc.
+      authorizationCode: cardSnap.data().authorizationCode,
+      email: studentWallet.email,
+      subaccountCode: vendorBankSnap.data().subaccountCode,
+      todayStr,
     };
-  } catch (err) {
-    console.error("initiateTopup error:", err.response?.data || err.message);
-    throw new HttpsError("internal", "Couldn't start the transfer. Try again.");
-  }
-});
-
-// Shared idempotent credit logic — called by both verifyTopup (client
-// poll) and topupWebhook (server push), whichever arrives first wins;
-// the other becomes a no-op.
-async function creditTopupIfPending(reference) {
-  const topupRef = db.collection("topups").doc(reference);
-
-  return db.runTransaction(async (t) => {
-    const snap = await t.get(topupRef);
-    if (!snap.exists) return { alreadyProcessed: false, notFound: true };
-    const topup = snap.data();
-    if (topup.status !== "pending") return { alreadyProcessed: true };
-
-    const walletRef = db.collection("wallets").doc(topup.uid);
-    t.update(walletRef, { balance: admin.firestore.FieldValue.increment(topup.amountKobo) });
-    t.set(topupRef, { status: "completed", completedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
-    t.set(db.collection("transactions").doc(), {
-      type: "topup",
-      uid: topup.uid,
-      amount: topup.amountKobo,
-      fee: TOPUP_MARGIN,
-      status: "completed",
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    return { alreadyProcessed: false };
   });
-}
 
-exports.verifyTopup = onCall({ secrets: [PAYSTACK_SECRET] }, async (request) => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
-
-  const reference = request.data?.reference;
-  if (!reference) throw new HttpsError("invalid-argument", "Missing reference.");
-
-  const topupSnap = await db.collection("topups").doc(reference).get();
-  if (!topupSnap.exists || topupSnap.data().uid !== uid) {
-    throw new HttpsError("not-found", "Topup not found.");
+  if (reserved.pinError) {
+    throw new HttpsError("permission-denied", reserved.pinError);
   }
 
+  const paystackHeaders = { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` };
   try {
-    const verifyRes = await axios.get(`${PAYSTACK_BASE}/transaction/verify/${reference}`, {
-      headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` },
-      timeout: 15000,
+    const res = await axios.post(
+      `${PAYSTACK_BASE}/transaction/charge_authorization`,
+      {
+        authorization_code: reserved.authorizationCode,
+        email: reserved.email,
+        amount: amt,
+        currency: "NGN",
+        reference: txRef.id, // doubles as the idempotency key
+        subaccount: reserved.subaccountCode,
+        bearer: FEE_BEARER,
+        metadata: { purpose: "charge" },
+      },
+      { headers: paystackHeaders, timeout: 20000 }
+    );
+    if (res.data?.data?.status !== "success") {
+      throw new Error(res.data?.gateway_response || "declined");
+    }
+    await txRef.set(
+      { status: "completed", gatewayResponse: res.data?.data?.gateway_response || "" },
+      { merge: true }
+    );
+    const doneTx = (await txRef.get()).data();
+    await notifyCharge({
+      studentUid,
+      studentEmail: reserved.email,
+      vendorName: doneTx.vendorName || "a vendor",
+      amount: amt,
     });
-    const tx = verifyRes.data?.data;
-
-    if (tx.status !== "success") {
-      return { credited: false, status: tx.status }; // still pending on Paystack's side
-    }
-    if (tx.amount !== topupSnap.data().totalChargeKobo || tx.currency !== "NGN") {
-      throw new HttpsError("failed-precondition", "Payment details don't match.");
-    }
-
-    const result = await creditTopupIfPending(reference);
-    return { credited: !result.alreadyProcessed, status: "success" };
+    return { success: true, txId: txRef.id };
   } catch (err) {
-    if (err instanceof HttpsError) throw err;
-    console.error("verifyTopup error:", err.response?.data || err.message);
-    throw new HttpsError("internal", "Couldn't verify payment.");
+    console.error("chargeWallet charge error:", err.response?.data || err.message);
+
+    // If we got no clear answer (timeout etc.), ask Paystack before assuming failure
+    try {
+      const check = await axios.get(`${PAYSTACK_BASE}/transaction/verify/${txRef.id}`, {
+        headers: paystackHeaders,
+        timeout: 15000,
+      });
+      if (check.data?.data?.status === "success") {
+        await txRef.set({ status: "completed" }, { merge: true });
+        const lateTx = (await txRef.get()).data();
+        await notifyCharge({
+          studentUid,
+          studentEmail: reserved.email,
+          vendorName: lateTx.vendorName || "a vendor",
+          amount: amt,
+        });
+        return { success: true, txId: txRef.id };
+      }
+    } catch (verifyErr) {
+      // not found on Paystack's side means it never went through
+    }
+
+    // Give the reserved daily allowance back and mark the charge failed
+    await db.runTransaction(async (t) => {
+      const [s, v] = await Promise.all([t.get(studentSecurityRef), t.get(vendorSecurityRef)]);
+      const d = s.data() || {};
+      const vd = v.data() || {};
+      if (d.dailySpentDate === reserved.todayStr) {
+        t.set(studentSecurityRef, { dailySpent: Math.max(0, (d.dailySpent || 0) - amt) }, { merge: true });
+      }
+      if (vd.vendorDailyDate === reserved.todayStr) {
+        t.set(vendorSecurityRef, { vendorDailyTotal: Math.max(0, (vd.vendorDailyTotal || 0) - amt) }, { merge: true });
+      }
+    });
+    await txRef.set({ status: "failed" }, { merge: true });
+    throw new HttpsError(
+      "failed-precondition",
+      "The card was declined. Ask the student to try again or use another card."
+    );
   }
 });
 
 // Single webhook endpoint — Paystack only allows one URL per account,
 // so this dispatches on event type instead of using separate functions.
-exports.paystackWebhook = onRequest({ secrets: [PAYSTACK_SECRET] }, async (req, res) => {
+exports.paystackWebhook = onRequest({ secrets: [PAYSTACK_SECRET, TELEGRAM_BOT_TOKEN] }, async (req, res) => {
   const hash = crypto
     .createHmac("sha512", PAYSTACK_SECRET.value())
-    .update(JSON.stringify(req.body))
+    .update(req.rawBody)
     .digest("hex");
   if (hash !== req.headers["x-paystack-signature"]) {
     return res.status(401).send("Invalid signature");
@@ -482,7 +601,23 @@ exports.paystackWebhook = onRequest({ secrets: [PAYSTACK_SECRET] }, async (req, 
   const event = req.body;
   try {
     if (event.event === "charge.success") {
-      await creditTopupIfPending(event.data.reference);
+      if (event.data.metadata?.purpose === "add_card") {
+        await saveCardIfPending(event.data.reference, event.data.authorization);
+      } else if (event.data.metadata?.purpose === "charge") {
+        const chargeTxRef = db.collection("transactions").doc(event.data.reference);
+        const chargeTxSnap = await chargeTxRef.get();
+        if (chargeTxSnap.exists && chargeTxSnap.data().status === "pending") {
+          await chargeTxRef.set({ status: "completed" }, { merge: true });
+          const ctx = chargeTxSnap.data();
+          const payerWallet = (await db.collection("wallets").doc(ctx.payerUid).get()).data() || {};
+          await notifyCharge({
+            studentUid: ctx.payerUid,
+            studentEmail: payerWallet.email,
+            vendorName: ctx.vendorName || "a vendor",
+            amount: ctx.amount,
+          });
+        }
+      }
     } else if (event.event === "transfer.success") {
       await db.collection("transactions").doc(event.data.reference).set(
         { status: "completed" }, { merge: true }
@@ -554,16 +689,24 @@ exports.saveBankAccount = onCall({ secrets: [PAYSTACK_SECRET] }, async (request)
   }
 
   try {
+    // Subaccount = the vendor's settlement destination. percentage_charge 0
+    // means the platform keeps nothing; the vendor gets the full payment
+    // minus Paystack's fee (see FEE_BEARER below).
     const res = await axios.post(
-      `${PAYSTACK_BASE}/transferrecipient`,
-      { type: "nuban", name: accountName, account_number: accountNumber, bank_code: bankCode, currency: "NGN" },
+      `${PAYSTACK_BASE}/subaccount`,
+      {
+        business_name: accountName,
+        settlement_bank: bankCode,
+        account_number: accountNumber,
+        percentage_charge: 0,
+      },
       { headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` }, timeout: 15000 }
     );
-    const recipientCode = res.data.data.recipient_code;
+    const subaccountCode = res.data.data.subaccount_code;
     const last4 = accountNumber.slice(-4);
 
     await db.collection("wallets").doc(uid).collection("private").doc("bank").set({
-      recipientCode, bankName, accountName, last4,
+      subaccountCode, bankName, accountName, last4,
     });
     await db.collection("wallets").doc(uid).set(
       { bankOnFile: { bankName, accountName, last4 } },
@@ -577,63 +720,129 @@ exports.saveBankAccount = onCall({ secrets: [PAYSTACK_SECRET] }, async (request)
   }
 });
 
-exports.requestWithdrawal = onCall({ secrets: [PAYSTACK_SECRET] }, async (request) => {
+// ============================================================
+// CARD ON FILE: student saves a card once. Paystack's hosted
+// checkout collects the card (card details never touch our
+// servers). We only keep the reusable authorization code.
+// ============================================================
+const CARD_SETUP_AMOUNT = 5000; // N50 in kobo, small first charge that yields a reusable authorization
+const ALLOWED_RETURN_ORIGINS = [
+  "http://127.0.0.1:5500",
+  "http://localhost:5500",
+  "https://ejayszn.github.io",
+];
+
+exports.initiateAddCard = onCall({ secrets: [PAYSTACK_SECRET] }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
 
-  const amountKobo = Math.round(Number(request.data?.amount));
-  if (!Number.isFinite(amountKobo) || amountKobo < MIN_WITHDRAWAL) {
-    throw new HttpsError("invalid-argument", "Minimum withdrawal is ₦500.");
+  let returnUrl;
+  try {
+    const parsed = new URL(request.data?.returnUrl);
+    if (!ALLOWED_RETURN_ORIGINS.includes(parsed.origin)) throw new Error("bad origin");
+    returnUrl = parsed.origin + parsed.pathname;
+  } catch {
+    throw new HttpsError("invalid-argument", "Invalid return URL.");
   }
 
-  const walletRef = db.collection("wallets").doc(uid);
-  const bankRef = walletRef.collection("private").doc("bank");
-  const [walletSnap, bankSnap] = await Promise.all([walletRef.get(), bankRef.get()]);
-
-  if (!bankSnap.exists) throw new HttpsError("failed-precondition", "Link a bank account first.");
-  if ((walletSnap.data()?.balance || 0) < amountKobo) {
-    throw new HttpsError("failed-precondition", "Insufficient balance.");
-  }
-
-  const fee = withdrawalFee(amountKobo) + stampDuty(amountKobo);
-  const netPayout = amountKobo - fee;
-  if (netPayout <= 0) throw new HttpsError("failed-precondition", "Amount too small after fees.");
-
-  const txRef = db.collection("transactions").doc();
-
-  await walletRef.update({ balance: admin.firestore.FieldValue.increment(-amountKobo) });
-  await txRef.set({
-    type: "withdrawal",
+  const userRecord = await admin.auth().getUser(uid);
+  const setupRef = db.collection("cardSetups").doc();
+  await setupRef.set({
     uid,
-    amount: amountKobo,
-    fee,
-    netPayout,
     status: "pending",
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
   try {
-    await axios.post(
-      `${PAYSTACK_BASE}/transfer`,
+    const res = await axios.post(
+      `${PAYSTACK_BASE}/transaction/initialize`,
       {
-        source: "balance",
-        amount: netPayout,
-        recipient: bankSnap.data().recipientCode,
-        reference: txRef.id,
-        reason: "MoneyPadi withdrawal",
+        email: userRecord.email,
+        amount: CARD_SETUP_AMOUNT,
+        currency: "NGN",
+        reference: setupRef.id,
+        channels: ["card"],
+        callback_url: returnUrl,
+        metadata: { purpose: "add_card", uid },
       },
       { headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` }, timeout: 15000 }
     );
-    // NOTE: if OTP finalization is enabled on your Paystack transfers
-    // settings, this call alone won't complete the payout — check your
-    // dashboard's Transfer settings and disable OTP for this to be
-    // fully automatic, or add a finalize-transfer step.
-    return { success: true, txId: txRef.id, netPayout, fee };
+    return { reference: setupRef.id, authorizationUrl: res.data.data.authorization_url };
   } catch (err) {
-    console.error("requestWithdrawal transfer error:", err.response?.data || err.message);
-    await walletRef.update({ balance: admin.firestore.FieldValue.increment(amountKobo) });
-    await txRef.set({ status: "failed" }, { merge: true });
-    throw new HttpsError("internal", "Withdrawal failed. Your balance has been refunded.");
+    console.error("initiateAddCard error:", err.response?.data || err.message);
+    throw new HttpsError("internal", "Couldn't start card setup. Try again.");
+  }
+});
+
+// Shared idempotent save, called by both verifyAddCard (client, after
+// the redirect back) and the webhook (server push). Whichever arrives
+// first saves the card, the other becomes a no-op.
+async function saveCardIfPending(reference, authorization) {
+  const setupRef = db.collection("cardSetups").doc(reference);
+
+  return db.runTransaction(async (t) => {
+    const snap = await t.get(setupRef);
+    if (!snap.exists) return { notFound: true };
+    const setup = snap.data();
+    if (setup.status !== "pending") return { alreadyProcessed: true };
+
+    if (!authorization?.reusable) {
+      t.set(setupRef, { status: "failed", reason: "not_reusable" }, { merge: true });
+      return { notReusable: true };
+    }
+
+    const card = {
+      last4: authorization.last4 || "",
+      brand: (authorization.brand || authorization.card_type || "").trim(),
+      bank: authorization.bank || "",
+      expMonth: authorization.exp_month || "",
+      expYear: authorization.exp_year || "",
+    };
+    const walletRef = db.collection("wallets").doc(setup.uid);
+    t.set(walletRef.collection("private").doc("card"), {
+      authorizationCode: authorization.authorization_code,
+      signature: authorization.signature || "",
+      ...card,
+    });
+    t.set(walletRef, { cardOnFile: card }, { merge: true });
+    t.set(setupRef, { status: "completed", completedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+    return { saved: true };
+  });
+}
+
+exports.verifyAddCard = onCall({ secrets: [PAYSTACK_SECRET] }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+
+  const reference = request.data?.reference;
+  if (!reference) throw new HttpsError("invalid-argument", "Missing reference.");
+
+  const setupSnap = await db.collection("cardSetups").doc(reference).get();
+  if (!setupSnap.exists || setupSnap.data().uid !== uid) {
+    throw new HttpsError("not-found", "Card setup not found.");
+  }
+
+  try {
+    const verifyRes = await axios.get(`${PAYSTACK_BASE}/transaction/verify/${reference}`, {
+      headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` },
+      timeout: 15000,
+    });
+    const tx = verifyRes.data?.data;
+
+    if (tx.status !== "success") return { saved: false, status: tx.status };
+    if (tx.amount !== CARD_SETUP_AMOUNT || tx.currency !== "NGN") {
+      throw new HttpsError("failed-precondition", "Payment details don't match.");
+    }
+
+    const result = await saveCardIfPending(reference, tx.authorization);
+    if (result.notReusable) {
+      throw new HttpsError("failed-precondition", "This card can't be saved. Try a different card.");
+    }
+    return { saved: true };
+  } catch (err) {
+    if (err instanceof HttpsError) throw err;
+    console.error("verifyAddCard error:", err.response?.data || err.message);
+    throw new HttpsError("internal", "Couldn't verify your card.");
   }
 });
 
@@ -742,6 +951,163 @@ exports.dailyTelegramReminder = onSchedule(
         await new Promise((r) => setTimeout(r, 50));
       } catch (err) {
         console.error(`dailyTelegramReminder failed for ${walletDoc.id}:`, err.response?.data || err.message);
+      }
+    }
+  }
+);
+
+// ============================================================
+// REMOVE CARD, REPORT A CHARGE, RECONCILIATION
+// ============================================================
+
+async function notifyAdmin(text) {
+  try {
+    for (const email of ADMIN_EMAILS) {
+      const u = await admin.auth().getUserByEmail(email);
+      const tg = await db.collection("wallets").doc(u.uid).collection("private").doc("telegram").get();
+      if (tg.exists) await sendTelegramMessage(tg.data().chatId, text);
+    }
+  } catch (err) {
+    console.error("notifyAdmin failed:", err.response?.data || err.message);
+  }
+}
+
+// Student removes their saved card. Vendors can't charge them until they add one again.
+exports.removeCard = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+  const walletRef = db.collection("wallets").doc(uid);
+  await walletRef.collection("private").doc("card").delete();
+  await walletRef.set({ cardOnFile: admin.firestore.FieldValue.delete() }, { merge: true });
+  return { success: true };
+});
+
+// Student reports a completed charge they don't recognise. Two open reports
+// against the same vendor freeze that vendor automatically.
+exports.reportCharge = onCall({ secrets: [TELEGRAM_BOT_TOKEN] }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "You need to be logged in.");
+
+  const txId = request.data?.txId;
+  const note = String(request.data?.note || "").slice(0, 300);
+  if (typeof txId !== "string" || !txId) throw new HttpsError("invalid-argument", "Missing charge.");
+
+  const txRef = db.collection("transactions").doc(txId);
+  const txSnap = await txRef.get();
+  if (!txSnap.exists || txSnap.data().payerUid !== uid) {
+    throw new HttpsError("not-found", "Charge not found.");
+  }
+  const tx = txSnap.data();
+  if (tx.status !== "completed") throw new HttpsError("failed-precondition", "Only completed charges can be reported.");
+  if (tx.reported) throw new HttpsError("already-exists", "You've already reported this charge.");
+
+  await db.collection("disputes").doc(txId).set({
+    txId,
+    payerUid: uid,
+    payerName: tx.payerName || "",
+    vendorUid: tx.vendorUid,
+    vendorName: tx.vendorName || "",
+    amount: tx.amount,
+    note,
+    status: "open",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  await txRef.set({ reported: true }, { merge: true });
+
+  const open = await db.collection("disputes")
+    .where("vendorUid", "==", tx.vendorUid)
+    .where("status", "==", "open")
+    .get();
+  let frozen = false;
+  if (open.size >= 2) {
+    await db.collection("wallets").doc(tx.vendorUid).set(
+      { frozen: true, frozenReason: "Multiple reports" }, { merge: true }
+    );
+    frozen = true;
+  }
+
+  await notifyAdmin(
+    `<b>Charge reported</b>\n${escHtml(tx.payerName || "A student")} reported ${escHtml(tx.vendorName || "a vendor")} ` +
+    `(₦${(tx.amount / 100).toLocaleString("en-NG")}).\n` +
+    (note ? `Note: ${escHtml(note)}\n` : "") +
+    (frozen ? "The vendor now has 2+ open reports and was frozen automatically." : "Check the Reports tab on the admin page.")
+  );
+  return { success: true };
+});
+
+exports.adminCloseDispute = onCall(async (request) => {
+  assertAdmin(request);
+  const id = request.data?.id;
+  if (typeof id !== "string" || !id) throw new HttpsError("invalid-argument", "Missing report.");
+  await db.collection("disputes").doc(id).set(
+    { status: "closed", closedBy: request.auth.uid, closedAt: admin.firestore.FieldValue.serverTimestamp() },
+    { merge: true }
+  );
+  return { success: true };
+});
+
+// Every 15 minutes: charges stuck on "pending" for 10+ minutes get settled
+// against what Paystack says, and the daily limit they reserved is given back.
+exports.reconcilePendingCharges = onSchedule(
+  { schedule: "every 15 minutes", timeZone: "Africa/Lagos", secrets: [PAYSTACK_SECRET, TELEGRAM_BOT_TOKEN] },
+  async () => {
+    const cutoff = Date.now() - 10 * 60 * 1000;
+    const snap = await db.collection("transactions").where("status", "==", "pending").get();
+
+    for (const doc of snap.docs) {
+      const tx = doc.data();
+      if (!tx.payerUid || !tx.vendorUid) continue; // charges only
+      if ((tx.createdAt?.toMillis?.() || 0) > cutoff) continue;
+
+      let outcome = null;
+      try {
+        const r = await axios.get(`${PAYSTACK_BASE}/transaction/verify/${doc.id}`, {
+          headers: { Authorization: `Bearer ${PAYSTACK_SECRET.value()}` },
+          timeout: 15000,
+        });
+        const s = r.data?.data?.status;
+        if (s === "success") outcome = "completed";
+        else if (["failed", "abandoned", "reversed"].includes(s)) outcome = "failed";
+      } catch (err) {
+        const code = err.response?.status;
+        if (code === 400 || code === 404) outcome = "failed"; // Paystack never saw it
+        else continue; // network trouble: try again next run
+      }
+      if (!outcome) continue;
+
+      let changed = false;
+      const day = new Date(tx.createdAt.toMillis()).toISOString().slice(0, 10);
+      const studentSecRef = db.collection("wallets").doc(tx.payerUid).collection("private").doc("security");
+      const vendorSecRef = db.collection("wallets").doc(tx.vendorUid).collection("private").doc("security");
+
+      await db.runTransaction(async (t) => {
+        const fresh = await t.get(doc.ref);
+        if (!fresh.exists || fresh.data().status !== "pending") return;
+        let s = {}, v = {};
+        if (outcome === "failed") {
+          const [sSnap, vSnap] = await Promise.all([t.get(studentSecRef), t.get(vendorSecRef)]);
+          s = sSnap.data() || {};
+          v = vSnap.data() || {};
+        }
+        if (outcome === "failed") {
+          if (s.dailySpentDate === day) {
+            t.set(studentSecRef, { dailySpent: Math.max(0, (s.dailySpent || 0) - tx.amount) }, { merge: true });
+          }
+          if (v.vendorDailyDate === day) {
+            t.set(vendorSecRef, { vendorDailyTotal: Math.max(0, (v.vendorDailyTotal || 0) - tx.amount) }, { merge: true });
+          }
+        }
+        t.set(doc.ref, { status: outcome, reconciled: true }, { merge: true });
+        changed = true;
+      });
+
+      if (changed && outcome === "completed") {
+        await notifyCharge({
+          studentUid: tx.payerUid,
+          studentEmail: "",
+          vendorName: tx.vendorName || "a vendor",
+          amount: tx.amount,
+        });
       }
     }
   }

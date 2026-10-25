@@ -193,19 +193,20 @@
 
   /* ---------- HERO ---------- */
   .hero{
-    padding:76px 0 40px;
+    padding:80px 0;
     position:relative;
     overflow:hidden;
-  }
-  .hero-grid{
-    display:grid;
-    grid-template-columns: 1.05fr 0.95fr;
-    gap:56px;
+    min-height:calc(100vh - var(--header-h, 64px));
+    min-height:calc(100svh - var(--header-h, 64px));
+    display:flex;
     align-items:center;
   }
+  .hero-grid{
+    text-align:center;
+  }
+  .hero .wrap{ width:100%; }
   @media (max-width: 900px){
-    .hero-grid{grid-template-columns:1fr; gap:44px;}
-    .hero{padding:44px 0 32px;}
+    .hero{padding:80px 0 72px;}
   }
   .eyebrow{
     display:inline-flex; align-items:center; gap:8px;
@@ -216,24 +217,25 @@
   .hero h1{
     font-size:clamp(34px, 5vw, 54px);
     font-weight:700;
-    max-width:15ch;
+    max-width:20ch;
+    margin:0 auto;
   }
   .hero h1 em{
     font-style:normal;
     background:linear-gradient(180deg, transparent 62%, rgba(232,163,61,0.55) 62%);
   }
   .hero p.lead{
-    margin-top:20px;
+    margin:20px auto 0;
     font-size:17.5px;
     color:var(--ink-soft);
-    max-width:46ch;
+    max-width:56ch;
   }
   .hero-actions{
-    display:flex; gap:12px; margin-top:32px; flex-wrap:wrap;
+    display:flex; gap:12px; margin-top:32px; flex-wrap:wrap; justify-content:center;
   }
   .hero-note{
     margin-top:18px; font-size:13.5px; color:var(--ink-soft);
-    display:flex; align-items:center; gap:8px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
   }
 
   /* Tablet mockup perspective, slight left-facing angle and floating effect */
@@ -255,16 +257,6 @@
     0%{ transform: rotateY(10deg) rotateZ(-4deg) translateY(-6px); }
     50%{ transform: rotateY(10deg) rotateZ(-4deg) translateY(-14px); }
     100%{ transform: rotateY(10deg) rotateZ(-4deg) translateY(-6px); }
-  }
-
-  @media (max-width: 800px){
-    .smartphone-mockup{
-      width: 300px;
-      height: 440px;
-      transform: rotateY(8deg) rotateZ(-3deg) translateY(-4px);
-      animation: phone-float 6s ease-in-out infinite;
-      box-shadow: var(--shadow-soft);
-    }
   }
 
   /* ---------- HERO VISUAL: the tap-to-pay moment ---------- */
@@ -377,45 +369,51 @@
   .section-head h2{font-size:clamp(26px,3.4vw,38px); font-weight:700;}
   .section-head p{margin-top:14px; font-size:16px; color:var(--ink-soft);}
 
-  /* How it works — steps */
+  /* How it works — white panel + connected steps */
+  #how-it-works{
+    background:var(--card);
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+    padding:96px 0;
+  }
+  #how-it-works .section-head{
+    margin-left:auto; margin-right:auto; text-align:center;
+  }
+  @media (max-width:760px){
+    #how-it-works{ padding:64px 0; }
+  }
+
   .steps{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:22px;
+    display:grid; grid-template-columns:repeat(3,1fr); gap:40px;
+    margin-top:8px;
   }
-  @media (max-width:800px){ .steps{grid-template-columns:1fr;} }
-  .step-card{
-    background: var(--card);
-    /* Initial clean border to match the rest of the site */
-    border: 1px solid rgba(15, 17, 21, 0.12);
-    border-radius: var(--radius);
-    padding: 28px 24px;
-    /* Smooth transitions for both the movement and the glowing shadow */
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
-                box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
-                border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  
-  /* Hover effect: Pop up + Glow */
-  @media (hover: hover) {
-    .step-card:hover {
-      /* Physically lifts the card up slightly */
-      transform: translateY(-5px); 
-      /* Slightly darkens the border edge to make it look sharp */
-      border-color: rgba(15, 17, 21, 0.22); 
-      /* A gorgeous, wide, soft depth glow */
-      box-shadow: 0 10px 30px rgba(15, 17, 21, 0.08), 
-                  0 1px 3px rgba(15, 17, 21, 0.02); 
-    }
-  }
+  .step-card{ position:relative; }
   .step-num{
     font-family:'Space Grotesk', sans-serif;
-    font-size:13px; font-weight:700; color:var(--green-deep);
-    background:rgba(26,122,94,0.09);
-    width:30px; height:30px; border-radius:9px;
+    font-size:13px; font-weight:700; color:#fff;
+    background:var(--green);
+    width:36px; height:36px; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
-    margin-bottom:18px;
+    margin-bottom:22px;
   }
-  .step-card h3{font-size:18px; font-weight:600; margin-bottom:8px;}
+  /* dashed line connecting one step to the next */
+  .step-card:not(:last-child)::after{
+    content:'';
+    position:absolute; top:18px; left:48px; right:-28px;
+    border-top:2px dashed rgba(26,122,94,0.35);
+  }
+  .step-card h3{font-size:19px; font-weight:600; margin-bottom:8px;}
   .step-card p{font-size:14.5px; color:var(--ink-soft);}
+
+  @media (max-width:800px){
+    .steps{ grid-template-columns:1fr; gap:36px; }
+    .step-card{ padding-left:56px; }
+    .step-num{ position:absolute; left:0; top:0; margin-bottom:0; }
+    .step-card:not(:last-child)::after{
+      top:44px; bottom:-30px; left:17px; right:auto; width:0;
+      border-top:none; border-left:2px dashed rgba(26,122,94,0.35);
+    }
+  }
 
   /* Modes: Pay / Receive tabs */
   .mode-toggle{
@@ -454,35 +452,43 @@
   .mock-line .amt.out{color:#B5442E;}
   .mock-line .amt.in{color:var(--green-deep);}
 
-  /* Trust / safety band — no card, just sits on the page */
+  /* Trust / safety limits */
   .trust{
-    color: var(--ink);
-    text-align:center;
+    display:grid; grid-template-columns:0.9fr 1.1fr; gap:64px; align-items:center;
+    text-align:left;
   }
-  .trust h2{max-width:none; margin:0 auto;}
-  .trust p.lead{margin-left:auto; margin-right:auto;}
-  .trust-grid{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:36px; margin-top:36px;
+  .trust-intro .kicker{
+    font-size:13px; font-weight:600; color:var(--green-deep);
+    text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; display:block;
   }
-  @media (max-width:800px){ .trust-grid{grid-template-columns:1fr;} }
-  .trust h2{font-size:clamp(24px,3vw,32px); max-width:20ch;}
-  /* Soft dark text for description paragraph */
-  .trust p.lead{color: var(--ink-soft); margin-top:14px; max-width:52ch; font-size:15.5px;}
-  .trust-item .num {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--green-deep); /* Changed from var(--amber) to green */
-}
-  /* Soft dark text for item labels */
-  .trust-item .lbl{margin-top:6px; font-size:14px; color: var(--ink-soft);}
+  .trust-intro h2{font-size:clamp(26px,3.4vw,38px); font-weight:700; max-width:14ch;}
+  .trust-intro .lead{margin-top:14px; color:var(--ink-soft); font-size:15.5px; max-width:40ch;}
+  .trust-list{
+    background:var(--card); border:1px solid var(--line);
+    border-radius:22px; box-shadow:var(--shadow-soft);
+  }
+  .trust-item{
+    display:grid; grid-template-columns:150px 1fr; gap:24px; align-items:center;
+    padding:26px 30px;
+  }
+  .trust-item + .trust-item{border-top:1px solid var(--line);}
+  .trust-item .num{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:30px; font-weight:700; color:var(--green-deep);
+  }
+  .trust-item .lbl{font-size:14.5px; color:var(--ink-soft);}
+  @media (max-width:800px){
+    .trust{grid-template-columns:1fr; gap:32px;}
+    .trust-item{grid-template-columns:1fr; gap:6px; padding:22px;}
+  }
 
   /* CTA band */
   .cta-band{
     background: linear-gradient(155deg, var(--green) 0%, var(--green-deep) 100%);
-    border-radius:26px; padding:56px 44px; text-align:center; color:white;
+    border-radius:0; padding:96px 24px; text-align:center; color:white;
   }
-  @media (max-width:760px){ .cta-band{padding:40px 24px;} }
+  .cta-section{padding:0;}
+  @media (max-width:760px){ .cta-band{padding:64px 24px;} }
   .cta-band h2{font-size:clamp(26px,3.6vw,36px); max-width:22ch; margin:0 auto;}
   .cta-band p{margin-top:14px; color:rgba(255,255,255,0.85); font-size:15.5px;}
   .cta-band .hero-actions{justify-content:center; margin-top:28px;}
@@ -579,7 +585,8 @@ footer {
 /* The Tablet Shell (iPad-style) */
 .smartphone-mockup {
   position: relative;
-  width: 380px;
+  width: 100%;
+  max-width: 380px;
   height: 560px;
   background: #1a1a1c;
   border-radius: 28px;
@@ -693,6 +700,98 @@ footer {
   width:100%; padding:10px; border-radius:11px; background:var(--ink); color:white;
   font-weight:600; font-size:13.5px; text-align:center; border:none; margin-top:2px;
 }
+/* ===== Older Safari fallbacks (iOS 12) ===== */
+header{ position:-webkit-sticky; position:sticky; top:0; -webkit-backdrop-filter:blur(10px); }
+.menu-backdrop{ top:0; right:0; bottom:0; left:0; }
+@supports not (height:100dvh){
+  .mobile-menu{ max-height:calc(100vh - 70px); }
+}
+@supports not (font-size:clamp(1px, 1vw, 2px)){
+  .hero h1{ font-size:38px; }
+  .section-head h2, .trust-intro h2, .cta-band h2{ font-size:28px; }
+}
+/* Old Safari has no flex "gap", so spacing is added with margins (class set by the JS below) */
+.no-flex-gap .hero-actions > * + *{ margin-left:12px; }
+.no-flex-gap .nav-cta > * + *,
+.no-flex-gap .mobile-cta > * + *{ margin-left:10px; }
+.no-flex-gap .logo > * + *{ margin-left:9px; }
+.no-flex-gap .eyebrow > * + *,
+.no-flex-gap .hero-note > * + *{ margin-left:8px; }
+.no-flex-gap .mode-toggle > * + *{ margin-left:4px; }
+.no-flex-gap .feature-list > * + *{ margin-top:16px; }
+.no-flex-gap .feature-list li::before{ margin-right:12px; }
+.no-flex-gap .footer-brand > * + *{ margin-top:14px; }
+.no-flex-gap .footer-col-links > * + *{ margin-top:12px; }
+.no-flex-gap .mobile-menu > * + *{ margin-top:4px; }
+
+/* ===== Device fit: iPod touch (320px), iPads, tablets, laptops ===== */
+html{ -webkit-text-size-adjust:100%; }
+body{ overflow-x:hidden; }
+.mode-grid > *{ min-width:0; }
+
+/* Small screens: the mockup fits and stops floating (lighter on old hardware) */
+/* ===== Tablet mockup: landscape iPad shape; portrait on small screens ===== */
+.smartphone-mockup{
+  max-width:520px;
+  height:390px;
+  border-radius:20px;
+}
+.smartphone-screen{
+  border-radius:8px;
+  padding:18px 20px;
+}
+/* camera sits on the long edge, like an iPad */
+.smartphone-notch{
+  top:50%; left:2px;
+  transform:translateY(-50%);
+}
+.phone-cols{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  grid-gap:20px;
+  gap:20px;
+  align-items:start;
+}
+
+@media (max-width:520px){
+  .smartphone-mockup{
+    height:460px;
+    height:calc((100vw - 48px) * 1.45);
+  }
+  .phone-cols{ gap:12px; grid-gap:12px; }
+  .phone-balance-card{ padding:12px; margin-bottom:8px; }
+  .phone-balance-amount{ font-size:22px; }
+  .phone-balance-code{ margin-top:6px; }
+  .phone-section-title{ margin:8px 0 6px; }
+  .phone-code-display{ padding:10px; margin-bottom:6px; }
+  .phone-code-display .code{ font-size:20px; }
+  .tx-group{ gap:8px; }
+  .tx-item:nth-child(n+3){ display:none; }
+  #screen-receive .tx-group{ display:none; }
+  .smartphone-notch{
+    top:2px; left:50%;
+    transform:translateX(-50%);
+  }
+  .smartphone-screen{ padding:20px 14px 16px; }
+  .phone-cols{ grid-template-columns:1fr; }
+}
+
+/* Typewriter heading: reserve 3 lines on very narrow screens so the page doesn't jump */
+@media (max-width:400px){
+  #typewriter-headline{ min-height:3.4em !important; }
+}
+
+/* Safety limits stack earlier, so iPad portrait isn't cramped */
+@media (max-width:900px){
+  .trust{ grid-template-columns:1fr; gap:32px; }
+  .trust-item{ grid-template-columns:1fr; gap:6px; padding:22px; }
+}
+
+/* Bigger touch targets on touch screens */
+@media (pointer:coarse){
+  .btn, .mode-btn{ min-height:44px; }
+  .hamburger{ width:44px; height:44px; }
+}
 </style>
 </head>
 <body>
@@ -735,43 +834,13 @@ footer {
       <div>
         <span class="eyebrow"><span class="eyebrow-dot"></span> Now live at Covenant University</span>
         <h1>No internet, card or cash? <em>No wahala.</em></h1>
-        <p class="lead">Pay shuttle drivers and campus vendors even when you can't get online. Just tell the vendor your MoneyPadi code and confirm the payment with your PIN. Their connection does the work for you.</p>
+        <p class="lead">Pay shuttle drivers and campus vendors even when you can't get online.</p>
         <div class="hero-actions">
           <a href="login.html#signup" class="btn btn-primary">Create your wallet</a>
           <a href="#how-it-works" class="btn btn-ghost">See how it works</a>
         </div>
         <div class="hero-note">
-          <span>🎓</span> Now open to Covenant University students &amp; campus vendors
-        </div>
-      </div>
-
-      <div class="scene">
-        <div class="scene-label">
-          <span>Shuttle stand · Chapel</span>
-          <span>Vendor device · Online</span>
-        </div>
-
-        <div class="scene-card">
-          <div class="scene-row">
-            <div>
-              <div class="scene-code">ABXY</div>
-              <div class="scene-tag">Student code · Chidera A.</div>
-            </div>
-            <div class="pill-status">₦1,000 requested</div>
-          </div>
-
-          <div class="pinpad">
-            <div>1</div><div>2</div><div>3</div>
-            <div>4</div><div class="active">5</div><div>6</div>
-            <div>7</div><div>8</div><div>9</div>
-          </div>
-        </div>
-
-        <div class="scene-footer">
-          <div class="avatar-stack">
-            <div class="a1"></div><div class="a2"></div><div class="a3"></div>
-          </div>
-          <span>Student enters PIN on the vendor's screen to confirm</span>
+          <span>🎓</span> Built for Covenant University students &amp; campus vendors
         </div>
       </div>
     </div>
@@ -781,14 +850,14 @@ footer {
     <div class="wrap">
       <div class="section-head">
         <span class="kicker">How it works</span>
-        <h2 id="typewriter-headline" style="min-height: 2.2em;">Same trust as using your card, minus the card.</h2>
+        <h2 id="typewriter-headline" style="min-height: 2.2em;">Save your card once. Pay with just a code and a PIN.</h2>
         <p>The vendor's phone does the talking to our servers. You just need your code and your PIN, that's it.</p>
       </div>
       <div class="steps">
         <div class="step-card">
           <div class="step-num">01</div>
-          <h3>Share your code</h3>
-          <p>Every MoneyPadi wallet comes with a permanent four-letter payment code. Think of it like your ATM card, but easier to remember.</p>
+          <h3>Save your card once</h3>
+          <p>Add your card while you have wifi. You get a permanent four-letter MoneyPadi code to share with vendors, and there's nothing to top up.</p>
         </div>
         <div class="step-card">
           <div class="step-num">02</div>
@@ -798,7 +867,7 @@ footer {
         <div class="step-card">
           <div class="step-num">03</div>
           <h3>You confirm with your PIN</h3>
-          <p>Type your PIN on their screen to authorize it. Nobody can charge your wallet without it, and every charge is capped.</p>
+          <p>Type your PIN on their screen to authorize it. Nobody can charge your card through MoneyPadi without it, and every charge is capped.</p>
         </div>
       </div>
     </div>
@@ -827,7 +896,7 @@ footer {
           <div class="mode-panel active" id="panel-pay">
             <h3 style="font-size:22px; font-weight:600;">Built for the everyday campus spend</h3>
             <ul class="feature-list">
-              <li>Top up from your bank account before you head out</li>
+              <li>Save your card once. No top-ups, no money scattered across wallets</li>
               <li>Your Code works even without your own network</li>
               <li>Every charge shows up in your history, with the vendor's name attached</li>
               <li>Instant email alert the moment a charge lands</li>
@@ -839,8 +908,8 @@ footer {
             <h3 style="font-size:22px; font-weight:600;">Get paid without chasing cash or change</h3>
             <ul class="feature-list">
               <li>Enter the student's code, type the amount, done. No POS terminal needed</li>
-              <li>Earnings build up in your own wallet in real time</li>
-              <li>Withdraw to your bank account whenever you want, no per-transaction fees</li>
+              <li>Payments are settled straight to your bank account</li>
+              <li>Only approved campus vendors can receive payments</li>
               <li>Every charge is tied to your account, so there's always a clear record</li>
             </ul>
           </div>
@@ -852,71 +921,88 @@ footer {
             <div class="smartphone-notch"></div>
             <div class="smartphone-screen">
               
-              <!-- PHONE SCREEN 1: PAY (STUDENT) — mirrors dashboard.html Pay panel exactly -->
+              <!-- PHONE SCREEN 1: PAY (STUDENT) -->
               <div class="phone-state active" id="screen-pay">
-                <div class="phone-balance-card">
-                  <div class="phone-balance-label">Wallet balance</div>
-                  <div class="phone-balance-amount">₦4,250.00</div>
-                  <div class="phone-balance-code">Your code: <b>ABXY</b></div>
-                </div>
-
-                <div class="phone-section-title">Show this to pay</div>
-                <div class="phone-code-display">
-                  <div class="code">ABXY</div>
-                </div>
-                <div class="phone-code-hint">Works even without your own network</div>
-
-                <div class="phone-section-title">Recent charges</div>
-                <div class="tx-group">
-                  <div class="tx-item">
-                    <div class="tx-left">
-                      <span class="tx-title">Shuttle · Chapel</span>
-                      <span class="tx-meta">Today, 8:14 AM</span>
+                <div class="phone-cols">
+                  <div>
+                    <div class="phone-balance-card">
+                      <div class="phone-balance-label">Your payment code</div>
+                      <div class="phone-balance-amount">ABXY</div>
+                      <div class="phone-balance-code">Card: Visa ••••4081</div>
                     </div>
-                    <span class="tx-amount negative">−₦200</span>
+                    <div class="phone-section-title">Show this to pay</div>
+                    <div class="phone-code-display">
+                      <div class="code">ABXY</div>
+                    </div>
+                    <div class="phone-code-hint">Works even without your own network</div>
                   </div>
-                  <div class="tx-item">
-                    <div class="tx-left">
-                      <span class="tx-title">Hair salon</span>
-                      <span class="tx-meta">Yesterday, 1:02 PM</span>
+
+                  <div>
+                    <div class="phone-section-title" style="margin-top:0;">Recent charges</div>
+                    <div class="tx-group">
+                      <div class="tx-item">
+                        <div class="tx-left">
+                          <span class="tx-title">Shuttle · Chapel</span>
+                          <span class="tx-meta">Today, 8:14 AM</span>
+                        </div>
+                        <span class="tx-amount negative">−₦200</span>
+                      </div>
+                      <div class="tx-item">
+                        <div class="tx-left">
+                          <span class="tx-title">Hair salon</span>
+                          <span class="tx-meta">Yesterday, 1:02 PM</span>
+                        </div>
+                        <span class="tx-amount negative">−₦900</span>
+                      </div>
+                      <div class="tx-item">
+                        <div class="tx-left">
+                          <span class="tx-title">Cafeteria</span>
+                          <span class="tx-meta">Mon, 7:40 PM</span>
+                        </div>
+                        <span class="tx-amount negative">−₦1,500</span>
+                      </div>
                     </div>
-                    <span class="tx-amount negative">−₦900</span>
                   </div>
                 </div>
               </div>
 
-              <!-- PHONE SCREEN 2: RECEIVE (VENDOR) — mirrors dashboard.html Receive panel exactly -->
+              <!-- PHONE SCREEN 2: RECEIVE (VENDOR) -->
               <div class="phone-state" id="screen-receive">
-                <div class="phone-section-title" style="margin-top:0;">Charge a student</div>
-                <div class="phone-field">
-                  <label>Student code</label>
-                  <div class="fake-input">ABXY</div>
-                </div>
-                <div class="phone-field">
-                  <label>Amount</label>
-                  <div class="fake-input">₦200</div>
-                </div>
-                <div class="phone-charge-btn">Charge</div>
-
-                <div class="phone-section-title">Today's earnings</div>
-                <div class="phone-balance-card" style="background:linear-gradient(155deg, var(--amber) 0%, #C9862B 100%);">
-                  <div class="phone-balance-label">Today's earnings</div>
-                  <div class="phone-balance-amount">₦12,600.00</div>
-                </div>
-                <div class="tx-group" style="margin-top:14px;">
-                  <div class="tx-item">
-                    <div class="tx-left">
-                      <span class="tx-title">Chidera A. · ABXY</span>
-                      <span class="tx-meta">2 mins ago</span>
+                <div class="phone-cols">
+                  <div>
+                    <div class="phone-section-title" style="margin-top:0;">Charge a student</div>
+                    <div class="phone-field">
+                      <label>Student code</label>
+                      <div class="fake-input">ABXY</div>
                     </div>
-                    <span class="tx-amount positive">+₦200</span>
+                    <div class="phone-field">
+                      <label>Amount</label>
+                      <div class="fake-input">₦200</div>
+                    </div>
+                    <div class="phone-charge-btn">Charge</div>
                   </div>
-                  <div class="tx-item">
-                    <div class="tx-left">
-                      <span class="tx-title">Tobi O. · F81M</span>
-                      <span class="tx-meta">14 mins ago</span>
+
+                  <div>
+                    <div class="phone-balance-card" style="background:linear-gradient(155deg, var(--amber) 0%, #C9862B 100%);">
+                      <div class="phone-balance-label">Today's earnings</div>
+                      <div class="phone-balance-amount">₦12,600.00</div>
                     </div>
-                    <span class="tx-amount positive">+₦200</span>
+                    <div class="tx-group">
+                      <div class="tx-item">
+                        <div class="tx-left">
+                          <span class="tx-title">Chidera A. · ABXY</span>
+                          <span class="tx-meta">2 mins ago</span>
+                        </div>
+                        <span class="tx-amount positive">+₦200</span>
+                      </div>
+                      <div class="tx-item">
+                        <div class="tx-left">
+                          <span class="tx-title">Tobi O. · F81M</span>
+                          <span class="tx-meta">14 mins ago</span>
+                        </div>
+                        <span class="tx-amount positive">+₦200</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -932,15 +1018,18 @@ footer {
   <section id="trust">
     <div class="wrap">
       <div class="trust">
-        <h2>Limits set for your protection.</h2>
-        <p class="lead">MoneyPadi applies strict safety measures to protect your funds. Limits may be increased later on.</p>
-        <div class="trust-grid">
+        <div class="trust-intro">
+          <span class="kicker">Safety</span>
+          <h2>Limits set for your protection.</h2>
+          <p class="lead">MoneyPadi applies strict safety measures to protect your funds. Limits may be increased later on.</p>
+        </div>
+        <div class="trust-list">
           <div class="trust-item">
-            <div class="num">₦5,000</div>
+            <div class="num">₦2,000</div>
             <div class="lbl">Maximum per single transaction, enforced on every charge</div>
           </div>
           <div class="trust-item">
-            <div class="num">₦20,000</div>
+            <div class="num">₦5,000</div>
             <div class="lbl">Daily cap per wallet, no matter how many vendors you pay</div>
           </div>
           <div class="trust-item">
@@ -952,8 +1041,7 @@ footer {
     </div>
   </section>
 
-  <section>
-    <div class="wrap">
+  <section class="cta-section">
       <div class="cta-band">
         <h2>Never let bad internet or a lost card stop a payment again</h2>
         <p>Sign up with your email and you'll be paying and receiving in a couple of minutes.</p>
@@ -962,7 +1050,6 @@ footer {
           <a href="login.html" class="btn btn-ghost">I already have an account</a>
         </div>
       </div>
-    </div>
   </section>
 </main>
 
@@ -1014,6 +1101,27 @@ footer {
 
 <script>
 
+// Measure the real header height so the hero fills exactly the rest of the screen
+function setHeaderHeight() {
+  const h = document.querySelector('header').offsetHeight;
+  document.documentElement.style.setProperty('--header-h', h + 'px');
+}
+setHeaderHeight();
+window.addEventListener('resize', setHeaderHeight);
+window.addEventListener('load', setHeaderHeight);
+
+// Old Safari (iOS < 14.1) can't do flex "gap": detect it and add a class
+(function () {
+  const probe = document.createElement('div');
+  probe.style.cssText = 'display:flex;flex-direction:column;row-gap:1px;position:absolute;visibility:hidden;';
+  probe.appendChild(document.createElement('div'));
+  probe.appendChild(document.createElement('div'));
+  document.body.appendChild(probe);
+  const supported = probe.scrollHeight === 1;
+  document.body.removeChild(probe);
+  if (!supported) document.documentElement.classList.add('no-flex-gap');
+})();
+
 // Hamburger nav toggle for tablet/mobile
 const hamburgerBtn = document.getElementById('hamburgerBtn');
 const mobileMenu = document.getElementById('mobileMenu');
@@ -1042,68 +1150,53 @@ mobileMenu.querySelectorAll('a').forEach(link => {
   link.addEventListener('click', closeMenu);
 });
 
-  // Animate the hero PIN pad key to feel faster and more dynamic
-  const pinKeys = document.querySelectorAll('.pinpad div');
-  let activeIndex = 4; // starts on "5"
-  
-  setInterval(() => {
-    pinKeys[activeIndex].classList.remove('active');
-    activeIndex = (activeIndex + 1) % pinKeys.length;
-    pinKeys[activeIndex].classList.add('active');
-  }, 600); // Changed from 1800ms to 600ms for faster typing
-
-  // Mobile: tapping a key glows it briefly, since there's no hover on touch
-  pinKeys.forEach(key => {
-    key.addEventListener('click', () => {
-      key.classList.add('tapped');
-      setTimeout(() => key.classList.remove('tapped'), 300); // Shorter glow to match the speed
-    });
-  });
-
   // ---------- LOOPING TYPEWRITER SCRIPT ----------
-  const textToType = "Same trust as swiping your card, minus the card.";
+  const phrases = [
+    "Save your card once. Pay with just a code and a PIN.",
+    "No internet? No wahala. Just your code and PIN.",
+    "Shuttle, haircut, suya. Pay in seconds.",
+    "Forgot your cash? Card declined? MoneyPadi got you.",
+    "No POS, no data, no stress."
+  ];
   const targetElement = document.getElementById('typewriter-headline');
 
-  function typeWriterLoop(element, text) {
+  function typeWriterLoop(element, list) {
+    let phraseIndex = 0;
     let index = 0;
     let isDeleting = false;
-    element.innerHTML = ''; // Clear initial element
-    
-    // Append the persistent blinking cursor
+    element.innerHTML = '';
+
     const cursor = document.createElement('span');
     cursor.className = 'cursor';
     element.appendChild(cursor);
 
     function tick() {
+      const text = list[phraseIndex];
+
       if (!isDeleting) {
-        // --- TYPING STATE ---
         if (index < text.length) {
-          // Insert the next character right before the cursor
           cursor.before(text.charAt(index));
           index++;
-          // Normal typing speed (40ms)
-          setTimeout(tick, 40); 
+          setTimeout(tick, 40);
         } else {
-          // Finished typing! Wait 3 seconds before starting to delete
+          // Done typing: pause so it can be read, then start deleting
           isDeleting = true;
-          setTimeout(tick, 3000); 
+          setTimeout(tick, 2500);
         }
       } else {
-        // --- DELETING STATE ---
         if (index > 0) {
-          // Remove the character right before the cursor
           cursor.previousSibling.remove();
           index--;
-          // Deleting is slightly faster (20ms) for a snappy feel
-          setTimeout(tick, 20); 
+          setTimeout(tick, 20);
         } else {
-          // Finished deleting! Wait 1 second, then start typing again
+          // Done deleting: move on to the next phrase
           isDeleting = false;
-          setTimeout(tick, 1000); 
+          phraseIndex = (phraseIndex + 1) % list.length;
+          setTimeout(tick, 500);
         }
       }
     }
-    
+
     tick();
   }
 
@@ -1111,7 +1204,7 @@ mobileMenu.querySelectorAll('a').forEach(link => {
   const typewriterObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        typeWriterLoop(targetElement, textToType);
+        typeWriterLoop(targetElement, phrases);
         typewriterObserver.unobserve(entry.target); // Run only once to start the infinite loop
       }
     });

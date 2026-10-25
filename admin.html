@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<title>Admin | MoneyPadi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<style>
+  :root{--bg:#F4F2EC;--card:#fff;--ink:#12141A;--muted:#5C6370;--faint:#8B929E;--line:rgba(18,20,26,.09);--green:#0F6B4F;--green-soft:rgba(15,107,79,.1);--red:#C0392B;--red-soft:rgba(192,57,43,.09);--amber:#B97A14;--amber-soft:rgba(212,146,42,.14)}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:'DM Sans',system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100dvh}
+  button{font-family:inherit;cursor:pointer}
+  header{position:sticky;top:0;z-index:10;background:rgba(244,242,236,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .bar,.wrap{max-width:980px;margin:0 auto;padding:0 20px}
+  .bar{display:flex;justify-content:space-between;align-items:center;height:60px}
+  .bar b{font-size:17px;letter-spacing:-.02em}
+  .bar span{color:var(--muted);font-weight:500}
+  .btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:100px;font-size:13.5px;font-weight:600}
+  .btn:hover{background:#faf9f6}
+  .btn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .btn.warn{color:var(--red);border-color:rgba(192,57,43,.3)}
+  .btn:focus-visible,.row:focus-visible,input:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  main{padding:24px 0 80px}
+  .msg{padding:60px 0;text-align:center;color:var(--muted)}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .stat .n{font-size:24px;font-weight:700;letter-spacing:-.02em}
+  .stat .l{font-size:13px;color:var(--muted)}
+  .tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:22px 0 14px}
+  .tools input{flex:1;min-width:180px;padding:10px 14px;border-radius:100px;border:1px solid var(--line);background:var(--card);font:inherit;font-size:14px}
+  .list{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+  .row{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:14px 16px}
+  .row:last-child{border-bottom:0}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .meta{font-size:12.5px;color:var(--faint)}
+  .right{display:flex;align-items:center;gap:10px;text-align:right}
+  .pill{font-size:12px;font-weight:600;padding:3px 10px;border-radius:100px;background:var(--green-soft);color:var(--green)}
+  .pill.failed,.pill.frozen{background:var(--red-soft);color:var(--red)}
+  .pill.pending,.pill.waiting{background:var(--amber-soft);color:var(--amber)}
+  .detail{margin-top:10px;padding:12px;background:var(--bg);border-radius:12px;font-size:13px;color:var(--muted);display:grid;grid-template-columns:auto 1fr;gap:4px 14px;word-break:break-all}
+  .detail b{color:var(--ink);font-weight:600}
+  .person{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .person:last-child{border-bottom:0}
+  .acts{display:flex;gap:8px;flex-wrap:wrap}
+  @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header><div class="bar"><b>MoneyPadi <span>Admin</span></b><div><button class="btn" id="refresh">Refresh</button> <button class="btn" id="logout">Log out</button></div></div></header>
+<main class="wrap">
+  <div class="msg" id="gate">Checking access…</div>
+  <div id="app" hidden>
+    <div class="stats" id="stats"></div>
+    <div class="tools">
+      <button class="btn on" data-tab="charges">Charges</button>
+      <button class="btn" data-tab="people">People</button>
+      <button class="btn" data-tab="reports">Reports</button>
+      <input id="q" type="search" placeholder="Search names, emails, codes" aria-label="Search" />
+    </div>
+    <div class="list" id="list"></div>
+  </div>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-functions.js";
+
+  const app = initializeApp({
+    apiKey: "AIzaSyDNj6C0cD2AnVjeN6auVeUmK5A9tTcj5nU",
+    authDomain: "moneypadi.firebaseapp.com",
+    projectId: "moneypadi",
+    storageBucket: "moneypadi.firebasestorage.app",
+    messagingSenderId: "709790962707",
+    appId: "1:709790962707:web:0c31584ea0009ad0315be6"
+  });
+  const auth = getAuth(app);
+  const fns = getFunctions(app);
+  const overviewFn = httpsCallable(fns, "adminOverview");
+  const flagsFn = httpsCallable(fns, "adminSetFlags");
+  const closeFn = httpsCallable(fns, "adminCloseDispute");
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const naira = k => "₦" + (k / 100).toLocaleString("en-NG");
+  const when = ms => ms ? new Date(ms).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : "";
+
+  let data = { transactions: [], people: [] };
+  let tab = "charges";
+
+  onAuthStateChanged(auth, user => {
+    if (!user) return location.replace("login.html");
+    load();
+  });
+
+  async function load() {
+    try {
+      const res = await overviewFn();
+      data = res.data;
+      $("gate").hidden = true;
+      $("app").hidden = false;
+      render();
+    } catch (err) {
+      $("gate").hidden = false;
+      $("gate").textContent = err.code === "functions/permission-denied"
+        ? "This account isn't an admin. Sign in with the admin email (it must be verified)."
+        : "Couldn't load data. Check the functions are deployed, then refresh.";
+    }
+  }
+
+  function render() {
+    const today = new Date().toDateString();
+    const todays = data.transactions.filter(t => new Date(t.createdAt).toDateString() === today);
+    const done = todays.filter(t => t.status === "completed");
+    $("stats").innerHTML = [
+      [naira(done.reduce((s, t) => s + t.amount, 0)), "Charged today"],
+      [done.length, "Completed today"],
+      [todays.filter(t => t.status === "failed").length, "Failed today"],
+      [data.people.filter(p => !p.vendorApproved && p.payout).length, "Vendors awaiting approval"]
+    ].map(([n, l]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+
+    const q = $("q").value.trim().toLowerCase();
+    $("list").innerHTML = tab === "charges" ? chargesHtml(q) : tab === "people" ? peopleHtml(q) : reportsHtml(q);
+  }
+
+  function chargesHtml(q) {
+    const rows = data.transactions.filter(t => !q || `${t.payerName} ${t.vendorName} ${t.id}`.toLowerCase().includes(q));
+    if (!rows.length) return '<div class="msg">No charges yet.</div>';
+    return rows.map(t => {
+      const e = t.evidence || {};
+      return `<button class="row" data-id="${esc(t.id)}">
+        <div class="top"><div><b>${esc(t.payerName || "Student")}</b> paid ${esc(t.vendorName || "Vendor")}<div class="meta">${when(t.createdAt)}</div></div>
+        <div class="right">${t.reported ? '<span class="pill failed">Reported</span>' : ""}<b>${naira(t.amount)}</b><span class="pill ${esc(t.status)}">${esc(t.status)}</span></div></div>
+        <div class="detail" hidden>
+          <b>Charge ID</b><span>${esc(t.id)}</span>
+          <b>PIN verified</b><span>${e.pinVerified ? "Yes" : "No record"}</span>
+          <b>Card</b><span>${e.cardLast4 ? "••••" + esc(e.cardLast4) : "n/a"}</span>
+          <b>Vendor device IP</b><span>${esc(e.ip || "n/a")}</span>
+          <b>Vendor device</b><span>${esc(e.userAgent || "n/a")}</span>
+          <b>Paystack response</b><span>${esc(t.gatewayResponse || "n/a")}</span>
+        </div></button>`;
+    }).join("");
+  }
+
+  function reportsHtml(q) {
+    const rows = (data.disputes || []).filter(d => d.status === "open" &&
+      (!q || `${d.payerName} ${d.vendorName} ${d.txId}`.toLowerCase().includes(q)));
+    if (!rows.length) return '<div class="msg">No open reports.</div>';
+    return rows.map(d => {
+      const v = data.people.find(p => p.uid === d.vendorUid);
+      return `<div class="person">
+        <div><b>${esc(d.payerName || "Student")}</b> reported ${esc(d.vendorName || "Vendor")}: <b>${naira(d.amount)}</b>
+          <div class="meta">${when(d.createdAt)} · Charge ${esc(d.txId)}</div>
+          ${d.note ? `<div class="meta">“${esc(d.note)}”</div>` : ""}</div>
+        <div class="acts">
+          ${v && v.frozen ? '<span class="pill frozen">Vendor frozen</span>' : v ? `<button class="btn warn" data-uid="${esc(d.vendorUid)}" data-key="frozen" data-val="true">Freeze vendor</button>` : ""}
+          <button class="btn" data-close="${esc(d.id)}">Close report</button>
+        </div></div>`;
+    }).join("");
+  }
+
+  function peopleHtml(q) {
+    const rows = data.people.filter(p => !q || `${p.name} ${p.email} ${p.code}`.toLowerCase().includes(q));
+    if (!rows.length) return '<div class="msg">No people found.</div>';
+    return rows.map(p => `<div class="person">
+      <div><b>${esc(p.name || "No name")}</b> <span class="meta">${esc(p.code)}</span>
+        <div class="meta">${esc(p.email)} · ${p.card ? "Card ••••" + esc(p.card) : "No card"} · ${p.payout ? esc(p.payout) : "No payout account"}</div></div>
+      <div class="acts">
+        ${p.frozen ? '<span class="pill frozen">Frozen</span>' : ""}
+        ${p.payout ? `<button class="btn ${p.vendorApproved ? "on" : ""}" data-uid="${esc(p.uid)}" data-key="vendorApproved" data-val="${!p.vendorApproved}">${p.vendorApproved ? "Approved vendor" : "Approve vendor"}</button>` : ""}
+        <button class="btn ${p.frozen ? "" : "warn"}" data-uid="${esc(p.uid)}" data-key="frozen" data-val="${!p.frozen}">${p.frozen ? "Unfreeze" : "Freeze"}</button>
+      </div></div>`).join("");
+  }
+
+  $("list").addEventListener("click", async e => {
+    const closeBtn = e.target.closest("button[data-close]");
+    if (closeBtn) {
+      closeBtn.disabled = true;
+      try {
+        await closeFn({ id: closeBtn.dataset.close });
+        const d = (data.disputes || []).find(x => x.id === closeBtn.dataset.close);
+        if (d) d.status = "closed";
+        render();
+      } catch (err) {
+        closeBtn.disabled = false;
+        alert(err.message || "Couldn't close. Try again.");
+      }
+      return;
+    }
+    const btn = e.target.closest("button[data-key]");
+    if (btn) {
+      btn.disabled = true;
+      try {
+        await flagsFn({ uid: btn.dataset.uid, [btn.dataset.key]: btn.dataset.val === "true" });
+        const p = data.people.find(x => x.uid === btn.dataset.uid);
+        if (p) p[btn.dataset.key] = btn.dataset.val === "true";
+        render();
+      } catch (err) {
+        btn.disabled = false;
+        alert(err.message || "Couldn't update. Try again.");
+      }
+      return;
+    }
+    const row = e.target.closest(".row");
+    if (row) row.querySelector(".detail").hidden = !row.querySelector(".detail").hidden;
+  });
+
+  document.querySelectorAll("[data-tab]").forEach(b => b.addEventListener("click", () => {
+    tab = b.dataset.tab;
+    document.querySelectorAll("[data-tab]").forEach(x => x.classList.toggle("on", x === b));
+    render();
+  }));
+  $("q").addEventListener("input", render);
+  $("refresh").addEventListener("click", load);
+  $("logout").addEventListener("click", async () => { await signOut(auth); location.replace("login.html"); });
+</script>
+</body>
+</html>

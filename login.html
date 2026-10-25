@@ -331,9 +331,14 @@
   // If you ever add a "verified student" perk, gate that server-side
   // off the stored email, not by restricting who can sign in at all.
 
+  // While a signup or Google sign-in is still finishing its steps (saving the
+  // name, recording consent), don't redirect yet. Those steps get cut off if the
+  // page navigates away the moment the account appears.
+  let authFlowBusy = false;
+
   // If a session already exists, skip the form entirely.
   onAuthStateChanged(auth, (user) => {
-    if (user) {
+    if (user && !authFlowBusy) {
       window.location.replace("dashboard.html");
     }
   });
@@ -442,6 +447,7 @@ document.querySelectorAll('.pw-toggle').forEach(btn => {
 
     submitBtn.disabled = true;
     submitBtn.textContent = "Creating wallet…";
+    authFlowBusy = true;
     try {
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   await updateProfile(cred.user, { displayName: name });
@@ -456,9 +462,10 @@ document.querySelectorAll('.pw-toggle').forEach(btn => {
     await linkPasswordToExistingGoogleAccount(email, password, name);
   } else {
     showError(friendlyAuthError(err));
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Create your wallet";
   }
+  authFlowBusy = false;
+  submitBtn.disabled = false;
+  submitBtn.textContent = "Create your wallet";
 }
   });
 
@@ -510,6 +517,7 @@ document.querySelectorAll('.pw-toggle').forEach(btn => {
       return;
     }
 
+    authFlowBusy = true;
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const isNewAccount = getAdditionalUserInfo(result)?.isNewUser;
@@ -524,6 +532,7 @@ document.querySelectorAll('.pw-toggle').forEach(btn => {
           );
           if (!agreed) {
             await signOut(auth);
+            authFlowBusy = false;
             showError("You need to agree to the Terms of Service and Privacy Policy to continue.");
             return;
           }
@@ -540,6 +549,7 @@ document.querySelectorAll('.pw-toggle').forEach(btn => {
       } else {
         showError(friendlyAuthError(err));
       }
+      authFlowBusy = false;
     }
   }
 
